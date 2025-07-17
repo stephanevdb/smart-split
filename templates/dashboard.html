@@ -11,24 +11,6 @@
     
     <!-- Balance Summary -->
     <div class="balance-summary">
-        <div class="balance-card total-balance">
-            <div class="balance-icon">💳</div>
-            <div class="balance-info">
-                <h3>Total Balance</h3>
-                {% set net_balance = total_owed_to_you - total_you_owe %}
-                {% if net_balance > 0 %}
-                    <span class="balance-amount positive">€{{ "%.2f"|format(net_balance) }}</span>
-                    <p class="balance-description">You are owed</p>
-                {% elif net_balance < 0 %}
-                    <span class="balance-amount negative">€{{ "%.2f"|format(-net_balance) }}</span>
-                    <p class="balance-description">You owe</p>
-                {% else %}
-                    <span class="balance-amount neutral">€0.00</span>
-                    <p class="balance-description">You're all settled up!</p>
-                {% endif %}
-            </div>
-        </div>
-        
         <div class="balance-cards-row">
             <div class="balance-card you-owe">
                 <div class="balance-icon">📤</div>
@@ -88,6 +70,9 @@
                             <a href="{{ url_for('add_expense', group_id=group.id) }}" class="btn btn-small btn-primary" onclick="event.stopPropagation()">
                                 Add Expense
                             </a>
+                            <button class="btn btn-small btn-secondary" onclick="event.stopPropagation(); openReceiptScannerFor({{ group.id }})" title="Scan Receipt">
+                                📷
+                            </button>
                         </div>
                     </div>
                 {% endfor %}
@@ -146,6 +131,10 @@ async function loadGroupBalances() {
             balanceElement.innerHTML = `<span class="balance-error">Error loading</span>`;
         }
     }
+}
+
+function openReceiptScannerFor(groupId) {
+    window.location.href = `/groups/${groupId}/scan_receipt`;
 }
 </script>
 {% endblock %} 

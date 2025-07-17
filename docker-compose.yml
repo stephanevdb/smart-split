@@ -1,11 +1,9 @@
 services:
-  web: # Define a service named 'web' for your Flask application
-    build: . # Instruct Docker Compose to build the image from the current directory (where Dockerfile is located)
+  web: 
+    build: .
     ports:
-      - "5066:5000" # Map port 5000 from the host to port 5000 in the container
+      - "5066:5066" 
     volumes:
-      - /home/root/smart-split:/app # Mount the current directory (your app code) into the /app directory in the container
-    # The command is already defined in the Dockerfile (CMD ["python3", "app.py"]),
-    # so we don't need to explicitly set 'command' here unless overriding.
+      - ./smart-split:/app
     # environment:
     #   - FLASK_ENV=development # Example: Set Flask environment variable

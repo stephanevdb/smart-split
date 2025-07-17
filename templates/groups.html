@@ -40,6 +40,9 @@
                     <div class="group-actions">
                         <a href="{{ url_for('group_detail', group_id=group.id) }}" class="btn btn-secondary">View</a>
                         <a href="{{ url_for('add_expense', group_id=group.id) }}" class="btn btn-primary">Add Expense</a>
+                        <button class="btn btn-secondary" onclick="openReceiptScannerFor({{ group.id }})" title="Scan Receipt">
+                            📷 Scan
+                        </button>
                     </div>
                 </div>
             {% endfor %}
@@ -99,6 +102,10 @@ async function loadAllGroupBalances() {
             element.innerHTML = `<span class="balance-error">Error loading balance</span>`;
         }
     }
+}
+
+function openReceiptScannerFor(groupId) {
+    window.location.href = `/groups/${groupId}/scan_receipt`;
 }
 </script>
 {% endblock %} 

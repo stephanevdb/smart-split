@@ -134,7 +134,10 @@ def init_db():
             username TEXT UNIQUE NOT NULL,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            created_at TIMESTAMP NOT NULL
+            created_at TIMESTAMP NOT NULL,
+            full_name TEXT,
+            iban TEXT,
+            bic TEXT
         )
     ''')
     
@@ -213,6 +216,9 @@ def init_db():
     
     # Migrate existing groups to have invite codes
     migrate_existing_groups()
+    
+    # Migrate users table to add bank details columns
+    migrate_users_table()
 
 # Helper functions
 def get_user_groups(user_id):
@@ -396,13 +402,38 @@ def migrate_existing_groups():
     finally:
         conn.close()
 
+def migrate_users_table():
+    """Add bank details columns to existing users table"""
+    conn = get_db_connection()
+    
+    try:
+        # Check if bank details columns exist
+        cursor = conn.execute("PRAGMA table_info(users)")
+        columns = [row[1] for row in cursor.fetchall()]
+        
+        if 'full_name' not in columns:
+            conn.execute('ALTER TABLE users ADD COLUMN full_name TEXT')
+            
+        if 'iban' not in columns:
+            conn.execute('ALTER TABLE users ADD COLUMN iban TEXT')
+            
+        if 'bic' not in columns:
+            conn.execute('ALTER TABLE users ADD COLUMN bic TEXT')
+            
+        conn.commit()
+        
+    except Exception as e:
+        print(f"User table migration error: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
 # Routes
 @app.route('/')
 def index():
     if current_user.is_authenticated:
-        groups = get_user_groups(current_user.id)
-        return render_template('index.html', groups=groups)
-    return render_template('index.html')
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -652,6 +683,31 @@ def add_expense(group_id):
     conn.close()
     return render_template('groups/add_expense.html', form=form, group=group, members=members)
 
+@app.route('/groups/<int:group_id>/scan_receipt', methods=['GET', 'POST'])
+@login_required
+def scan_receipt(group_id):
+    conn = get_db_connection()
+    
+    # Check if user is member of group
+    membership = conn.execute('''
+        SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?
+    ''', (group_id, current_user.id)).fetchone()
+    
+    if not membership:
+        flash('You are not a member of this group.', 'error')
+        return redirect(url_for('groups'))
+    
+    # Get group info
+    group = conn.execute('SELECT * FROM groups WHERE id = ?', (group_id,)).fetchone()
+    conn.close()
+    
+    if request.method == 'POST':
+        # Handle file upload here (analysis logic will come later)
+        flash('Receipt analysis feature coming soon! Redirecting to manual entry...', 'info')
+        return redirect(url_for('add_expense', group_id=group_id))
+    
+    return render_template('groups/scan_receipt.html', group=group)
+
 @app.route('/groups/<int:group_id>/settle/<int:payee_id>', methods=['GET', 'POST'])
 @login_required
 def settle_debt(group_id, payee_id):
@@ -801,10 +857,49 @@ def join_group(invite_code):
 def profile():
     return render_template('profile.html')
 
-@app.route('/settings')
+@app.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
-    return render_template('settings.html')
+    if request.method == 'POST':
+        # Handle bank details update
+        full_name = request.form.get('full_name', '').strip()
+        iban = request.form.get('iban', '').strip()
+        bic = request.form.get('bic', '').strip()
+        
+        # Update user bank details
+        conn = get_db_connection()
+        try:
+            conn.execute('''
+                UPDATE users 
+                SET full_name = ?, iban = ?, bic = ?
+                WHERE id = ?
+            ''', (full_name, iban, bic, current_user.id))
+            conn.commit()
+            flash('Bank details updated successfully!', 'success')
+        except Exception as e:
+            flash('Error updating bank details. Please try again.', 'error')
+            print(f"Error updating bank details: {e}")
+        finally:
+            conn.close()
+        
+        return redirect(url_for('settings'))
+    
+    # GET request - load current bank details
+    conn = get_db_connection()
+    user_data = conn.execute('''
+        SELECT full_name, iban, bic 
+        FROM users 
+        WHERE id = ?
+    ''', (current_user.id,)).fetchone()
+    conn.close()
+    
+    bank_details = {
+        'full_name': user_data['full_name'] if user_data and user_data['full_name'] else '',
+        'iban': user_data['iban'] if user_data and user_data['iban'] else '',
+        'bic': user_data['bic'] if user_data and user_data['bic'] else ''
+    }
+    
+    return render_template('settings.html', bank_details=bank_details)
 
 # PWA Routes
 @app.route('/manifest.json')

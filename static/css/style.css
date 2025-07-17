@@ -1809,458 +1809,99 @@ body {
     font-size: 0.9rem;
 }
 
-/* Dark Mode */
-body.dark-mode {
-    background-color: #1a1a1a;
-    color: #e0e0e0;
-}
-
-body.dark-mode .auth-card,
-body.dark-mode .balance-card,
-body.dark-mode .group-card,
-body.dark-mode .group-item,
-body.dark-mode .member-card,
-body.dark-mode .settlement-item,
-body.dark-mode .expense-item,
-body.dark-mode .settlement-card,
-body.dark-mode .form-card,
-body.dark-mode .tips-card,
-body.dark-mode .empty-state,
-body.dark-mode .all-settled,
-body.dark-mode .empty-expenses,
-body.dark-mode .balances-chart,
-body.dark-mode .profile-card,
-body.dark-mode .settings-section,
-body.dark-mode .hero,
-body.dark-mode .feature-card {
-    background: #2d2d2d;
-    color: #e0e0e0;
-}
-
-body.dark-mode .form-input,
-body.dark-mode .form-textarea,
-body.dark-mode .form-select {
-    background: #3d3d3d;
-    border-color: #555;
-    color: #e0e0e0;
-}
-
-body.dark-mode .member-checkbox {
-    background: #3d3d3d;
-}
-
-body.dark-mode .member-checkbox:hover {
-    background: #4d4d4d;
-}
-
-/* Dashboard Dark Mode */
-body.dark-mode .dashboard-header h2 {
-    color: #4fc3f7; /* Lighter blue for better contrast */
-}
-
-body.dark-mode .dashboard-header p {
-    color: #b0b0b0;
-}
-
-body.dark-mode .recent-groups h3,
-body.dark-mode .balance-info h3,
-body.dark-mode .balance-info h4,
-body.dark-mode h3,
-body.dark-mode h4 {
-    color: #e0e0e0;
-}
-
-body.dark-mode .balance-description {
-    color: #b0b0b0;
-}
-
-body.dark-mode .balance-amount.neutral {
-    color: #b0b0b0;
-}
-
-body.dark-mode .group-header h4 {
+.footer a {
     color: #4fc3f7;
+    text-decoration: none;
+    font-weight: 500;
 }
 
-body.dark-mode .group-description {
-    color: #b0b0b0;
-}
-
-body.dark-mode .group-meta {
-    color: #999;
-}
-
-body.dark-mode .member-name {
-    color: #e0e0e0;
-}
-
-body.dark-mode .expense-info h4 {
-    color: #e0e0e0;
-}
-
-body.dark-mode .expense-meta {
-    color: #999;
-}
-
-body.dark-mode .settlement-text {
-    color: #e0e0e0;
-}
-
-body.dark-mode .created-by,
-body.dark-mode .created-date {
-    color: #999;
-}
-
-body.dark-mode .page-header h2 {
-    color: #4fc3f7;
-}
-
-body.dark-mode .form-header h2 {
-    color: #4fc3f7;
-}
-
-body.dark-mode .form-header p {
-    color: #b0b0b0;
-}
-
-body.dark-mode .form-label {
-    color: #e0e0e0;
-}
-
-body.dark-mode .user-welcome {
-    color: #b0b0b0;
-}
-
-/* Header Dark Mode */
-body.dark-mode .header {
-    background: #2d2d2d;
-    border-bottom: 1px solid #444;
-}
-
-body.dark-mode .header h1 a {
-    color: #4fc3f7;
-}
-
-body.dark-mode .nav-link {
-    color: #e0e0e0;
-}
-
-body.dark-mode .nav-link:hover {
-    color: #4fc3f7;
-    background: rgba(79, 195, 247, 0.1);
-}
-
-/* Footer Dark Mode */
-body.dark-mode .footer {
-    background: #2d2d2d;
-    color: #b0b0b0;
-    border-top: 1px solid #444;
-}
-
-/* Flash Messages Dark Mode */
-body.dark-mode .flash-message {
-    background: #3d3d3d;
-    border-left: 4px solid #4fc3f7;
-    color: #e0e0e0;
-}
-
-body.dark-mode .flash-message.flash-error {
-    border-left-color: #f44336;
-}
-
-body.dark-mode .flash-message.flash-success {
-    border-left-color: #4caf50;
-}
-
-body.dark-mode .flash-message.flash-warning {
-    border-left-color: #ff9800;
-}
-
-/* Button Dark Mode Improvements */
-body.dark-mode .btn-secondary {
-    background: #444;
-    color: #e0e0e0;
-}
-
-body.dark-mode .btn-secondary:hover {
-    background: #555;
-}
-
-/* Links Dark Mode */
-body.dark-mode a {
-    color: #4fc3f7;
-}
-
-body.dark-mode a:hover {
+.footer a:hover {
     color: #81d4fa;
+    text-decoration: underline;
 }
 
-/* Table and List Dark Mode */
-body.dark-mode .loading {
-    color: #4fc3f7;
+/* Bank Details Section */
+.bank-details-form {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    margin-bottom: 1rem;
 }
 
-body.dark-mode .error {
-    color: #f44336;
+.bank-details-form .form-group {
+    margin-bottom: 1.5rem;
 }
 
-/* Split Options Dark Mode */
-body.dark-mode .split-options {
-    border-color: #555;
+.bank-details-form .form-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #333;
 }
 
-body.dark-mode .split-preview {
-    background: #3d3d3d;
-    border-left-color: #4fc3f7;
+.bank-details-form .form-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
-body.dark-mode .split-preview-content h5 {
-    color: #4fc3f7;
-}
-
-body.dark-mode .split-item {
-    background: #2d2d2d;
-    border-color: #555;
-    color: #e0e0e0;
-}
-
-/* Auth Links Dark Mode */
-body.dark-mode .auth-links a {
-    color: #4fc3f7;
-}
-
-/* Empty State Dark Mode */
-body.dark-mode .empty-state h3,
-body.dark-mode .empty-state h4 {
-    color: #e0e0e0;
-}
-
-body.dark-mode .empty-state p {
-    color: #b0b0b0;
-}
-
-/* Member Balance Colors Dark Mode */
-body.dark-mode .member-balance .positive {
-    color: #66bb6a; /* Lighter green for better contrast */
-}
-
-body.dark-mode .member-balance .negative {
-    color: #ef5350; /* Lighter red for better contrast */
-}
-
-body.dark-mode .member-balance .neutral {
-    color: #b0b0b0;
-}
-
-/* Balance Display Dark Mode */
-body.dark-mode .balance-positive {
-    color: #66bb6a;
-}
-
-body.dark-mode .balance-negative {
-    color: #ef5350;
-}
-
-body.dark-mode .balance-neutral {
-    color: #b0b0b0;
-}
-
-/* Quick Actions Dark Mode */
-body.dark-mode .quick-actions h3 {
-    color: #e0e0e0;
-}
-
-/* Payment Flow Dark Mode */
-body.dark-mode .user-name {
-    color: #e0e0e0;
-}
-
-body.dark-mode .payment-arrow {
-    color: #4fc3f7;
-}
-
-/* Settlement Notes Dark Mode */
-body.dark-mode .settlement-note {
-    background: #3d3d3d;
-    border-left-color: #4fc3f7;
-    color: #e0e0e0;
-}
-
-body.dark-mode .payment-methods {
-    background: #3d3d3d;
-}
-
-body.dark-mode .payment-methods h4 {
-    color: #4fc3f7;
-}
-
-/* Additional Settlement Dark Mode Styles */
-body.dark-mode .settlement-card h3 {
-    color: #4fc3f7;
-}
-
-body.dark-mode .suggested-amounts p {
-    color: #b0b0b0;
-}
-
-body.dark-mode .current-balance {
-    background: #3d3d3d;
-    border-color: #666;
-    color: #e0e0e0;
-}
-
-body.dark-mode .current-balance.neutral {
-    background: #2d4a2d;
-    border-color: #4a6b4a;
-}
-
-body.dark-mode .payment-methods ul,
-body.dark-mode .payment-methods li {
-    color: #e0e0e0;
-}
-
-body.dark-mode .payment-methods p {
-    color: #b0b0b0;
-}
-
-/* Additional Form and General Text Dark Mode */
-body.dark-mode .group-title h2 {
-    color: #4fc3f7;
-}
-
-body.dark-mode .group-title p {
-    color: #b0b0b0;
-}
-
-body.dark-mode .group-members h3,
-body.dark-mode .settle-up-section h3,
-body.dark-mode .expenses-section h3,
-body.dark-mode .balances-section h3 {
-    color: #e0e0e0;
-}
-
-body.dark-mode .all-settled h3 {
-    color: #66bb6a;
-}
-
-body.dark-mode .all-settled p {
-    color: #b0b0b0;
-}
-
-body.dark-mode .empty-expenses h3,
-body.dark-mode .empty-expenses p {
-    color: #e0e0e0;
-}
-
-body.dark-mode .tips-card {
-    background: #2d4a2d;
-    border-left-color: #66bb6a;
-}
-
-body.dark-mode .tips-card h4 {
-    color: #66bb6a;
-}
-
-body.dark-mode .tips-card li {
-    color: #e0e0e0;
-}
-
-/* Button improvements for dark mode */
-body.dark-mode .btn-small {
-    background: #444;
-    color: #e0e0e0;
-}
-
-body.dark-mode .btn-small:hover {
-    background: #555;
-}
-
-/* General text improvements */
-body.dark-mode .balance-label {
-    color: #b0b0b0;
-}
-
-body.dark-mode .currency-symbol {
-    color: #b0b0b0;
-}
-
-body.dark-mode .profile-header h2,
-body.dark-mode .settings-header h2 {
-    color: #4fc3f7;
-}
-
-body.dark-mode .hero h2 {
-    color: #4fc3f7;
-}
-
-body.dark-mode .hero p {
-    color: #b0b0b0;
-}
-
-body.dark-mode .features h3,
-body.dark-mode .pwa-features h3 {
-    color: #e0e0e0;
-}
-
-body.dark-mode .feature-card h4 {
-    color: #4fc3f7;
-}
-
-body.dark-mode .feature-card p {
-    color: #b0b0b0;
-}
-
-/* Split Type and Custom Amounts Dark Mode */
-body.dark-mode .split-type-option {
-    background: #3d3d3d;
-    border-color: #555;
-    color: #e0e0e0;
-}
-
-body.dark-mode .split-type-option:hover {
-    background: #4d4d4d;
+.bank-details-form .form-input:focus {
+    outline: none;
     border-color: #4fc3f7;
+    box-shadow: 0 0 0 0.2rem rgba(79, 195, 247, 0.25);
 }
 
-body.dark-mode .split-type-option:has(input[type="radio"]:checked) {
-    background: #2d4a5c;
-    border-color: #4fc3f7;
-    color: #4fc3f7;
+.bank-details-form .form-help {
+    display: block;
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
 }
 
-body.dark-mode .custom-amounts-section {
-    background: #3d3d3d;
-    border-left-color: #4fc3f7;
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
 }
 
-body.dark-mode .custom-amounts-section h5 {
-    color: #4fc3f7;
+.bank-details-note {
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-top: 1rem;
 }
 
-body.dark-mode .custom-amount-input-group {
-    background: #2d2d2d;
-    border-color: #555;
+.bank-details-note p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #1565c0;
 }
 
-body.dark-mode .custom-amount-label {
-    color: #e0e0e0;
+.section-description {
+    color: #6c757d;
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
 }
 
-body.dark-mode .custom-amounts-summary {
-    background: #2d2d2d;
-    border-color: #555;
-}
-
-body.dark-mode .custom-amounts-summary-content p {
-    color: #e0e0e0;
-}
-
-body.dark-mode .custom-amounts-summary-content .error {
-    color: #ef5350;
-}
-
-body.dark-mode .custom-amounts-summary-content .success {
-    color: #66bb6a;
+/* Responsive adjustments for bank details */
+@media (max-width: 768px) {
+    .bank-details-form {
+        padding: 1rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+    }
 }
 
 /* Loading Animation */
@@ -2540,4 +2181,259 @@ body.dark-mode .invite-tips li {
 
 body.dark-mode .invite-actions {
     border-top-color: #444;
+} 
+
+/* Receipt Scanner Modal */
+.receipt-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.receipt-modal-content {
+    background: white;
+    border-radius: 8px;
+    padding: 0;
+    max-width: 600px;
+    max-height: 90vh;
+    width: 90%;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.receipt-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.receipt-modal-header h3 {
+    margin: 0;
+    color: #333;
+}
+
+.receipt-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.receipt-modal-close:hover {
+    color: #333;
+    background: #f8f9fa;
+    border-radius: 50%;
+}
+
+.receipt-upload-area {
+    padding: 1.5rem;
+}
+
+.upload-zone {
+    border: 2px dashed #ced4da;
+    border-radius: 8px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #f8f9fa;
+}
+
+.upload-zone:hover,
+.upload-zone.drag-over {
+    border-color: #4fc3f7;
+    background: #e3f2fd;
+}
+
+.upload-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.upload-zone h4 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.upload-zone p {
+    margin: 0 0 1.5rem 0;
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.upload-preview {
+    text-align: center;
+}
+
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.preview-header h4 {
+    margin: 0;
+    color: #333;
+}
+
+.preview-image {
+    margin-bottom: 1rem;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.receipt-info {
+    text-align: left;
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.receipt-info p {
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.receipt-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    padding: 1.5rem;
+    border-top: 1px solid #e9ecef;
+    flex-wrap: wrap;
+}
+
+.receipt-processing {
+    text-align: center;
+    padding: 2rem 1.5rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.processing-spinner {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.receipt-processing p {
+    margin: 0;
+    color: #666;
+    font-size: 0.95rem;
+}
+
+/* Responsive receipt modal */
+@media (max-width: 768px) {
+    .receipt-modal-content {
+        width: 95%;
+        margin: 1rem;
+    }
+    
+    .upload-zone {
+        padding: 2rem 1rem;
+    }
+    
+    .receipt-modal-header,
+    .receipt-upload-area,
+    .receipt-actions {
+        padding: 1rem;
+    }
+    
+    .receipt-actions {
+        flex-direction: column;
+    }
+    
+    .receipt-actions .btn {
+        width: 100%;
+    }
+}
+
+/* Receipt Upload Container for separate page */
+.receipt-upload-container {
+    background: white;
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e9ecef;
+}
+
+.receipt-upload-container .upload-zone {
+    margin-bottom: 0;
+}
+
+.receipt-upload-container .upload-preview {
+    margin-bottom: 0;
+}
+
+.receipt-upload-container .receipt-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e9ecef;
+    flex-wrap: wrap;
+}
+
+.receipt-upload-container .receipt-processing {
+    text-align: center;
+    padding: 2rem 0;
+    border-top: 1px solid #e9ecef;
+    margin-top: 2rem;
+}
+
+.navigation-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+/* Responsive adjustments for receipt upload page */
+@media (max-width: 768px) {
+    .receipt-upload-container {
+        padding: 1.5rem;
+    }
+    
+    .receipt-upload-container .receipt-actions {
+        flex-direction: column;
+    }
+    
+    .receipt-upload-container .receipt-actions .btn {
+        width: 100%;
+    }
+    
+    .navigation-actions {
+        flex-direction: column;
+    }
+    
+    .navigation-actions .btn {
+        width: 100%;
+    }
 } 

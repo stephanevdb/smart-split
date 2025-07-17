@@ -13,12 +13,6 @@
         <div class="settings-section">
             <h3>🔧 App Preferences</h3>
             <div class="setting-item">
-                <label for="darkMode">Dark Mode</label>
-                <input type="checkbox" id="darkMode" onchange="toggleDarkMode()">
-                <span class="setting-description">Enable dark theme for better night viewing</span>
-            </div>
-            
-            <div class="setting-item">
                 <label for="notifications">Push Notifications</label>
                 <input type="checkbox" id="notifications" onchange="toggleNotifications()">
                 <span class="setting-description">Receive notifications for important updates</span>
@@ -38,6 +32,57 @@
                 <p><strong>Email:</strong> {{ current_user.email }}</p>
                 <p><strong>Account Type:</strong> Standard User</p>
                 <p><strong>Status:</strong> <span class="status-active">Active</span></p>
+            </div>
+        </div>
+        
+        <div class="settings-section">
+            <h3>🏦 Bank Details</h3>
+            <p class="section-description">Add your bank details for easy payment settlements</p>
+            
+            <form method="POST" class="bank-details-form">
+                <div class="form-group">
+                    <label for="full_name" class="form-label">Full Name (as on bank account)</label>
+                    <input type="text" 
+                           id="full_name" 
+                           name="full_name" 
+                           class="form-input" 
+                           value="{{ bank_details.full_name }}"
+                           placeholder="Enter your full legal name">
+                    <span class="form-help">Enter your name exactly as it appears on your bank account</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="iban" class="form-label">IBAN</label>
+                    <input type="text" 
+                           id="iban" 
+                           name="iban" 
+                           class="form-input" 
+                           value="{{ bank_details.iban }}"
+                           placeholder="DE89 3704 0044 0532 0130 00"
+                           maxlength="34">
+                    <span class="form-help">International Bank Account Number (IBAN)</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="bic" class="form-label">BIC/SWIFT Code</label>
+                    <input type="text" 
+                           id="bic" 
+                           name="bic" 
+                           class="form-input" 
+                           value="{{ bank_details.bic }}"
+                           placeholder="COBADEFFXXX"
+                           maxlength="11">
+                    <span class="form-help">Bank Identifier Code (BIC) or SWIFT code</span>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Bank Details</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearBankDetails()">Clear All</button>
+                </div>
+            </form>
+            
+            <div class="bank-details-note">
+                <p><strong>🔒 Security Note:</strong> Your bank details are stored securely and are only visible to you. They can be used by other group members to send you payments when settling expenses.</p>
             </div>
         </div>
         
@@ -103,15 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadUserPreferences();
 });
 
-function toggleDarkMode() {
-    const enabled = document.getElementById('darkMode').checked;
-    localStorage.setItem('darkMode', enabled);
-    if (enabled) {
-        document.body.classList.add('dark-mode');
-    } else {
-        document.body.classList.remove('dark-mode');
-    }
-}
+
 
 function toggleNotifications() {
     const enabled = document.getElementById('notifications').checked;
@@ -127,20 +164,8 @@ function toggleAutoSave() {
 }
 
 function loadUserPreferences() {
-    // Dark mode defaults to true if not set
-    const darkMode = localStorage.getItem('darkMode');
-    const isDarkMode = darkMode === null ? true : darkMode === 'true';
-    
-    document.getElementById('darkMode').checked = isDarkMode;
     document.getElementById('notifications').checked = localStorage.getItem('notifications') === 'true';
     document.getElementById('autoSave').checked = localStorage.getItem('autoSave') !== 'false';
-    
-    // Dark mode is already applied globally, but ensure consistency
-    if (isDarkMode) {
-        document.body.classList.add('dark-mode');
-    } else {
-        document.body.classList.remove('dark-mode');
-    }
 }
 
 function showPasswordChange() {
@@ -222,5 +247,35 @@ function clearCache() {
         });
     }
 }
+
+function clearBankDetails() {
+    if (confirm('Are you sure you want to clear all bank details?')) {
+        document.getElementById('full_name').value = '';
+        document.getElementById('iban').value = '';
+        document.getElementById('bic').value = '';
+    }
+}
+
+// Format IBAN as user types
+document.addEventListener('DOMContentLoaded', function() {
+    const ibanInput = document.getElementById('iban');
+    if (ibanInput) {
+        ibanInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\s/g, '').toUpperCase();
+            let formattedValue = value.replace(/(.{4})/g, '$1 ').trim();
+            if (formattedValue.length > 34) {
+                formattedValue = formattedValue.substring(0, 34);
+            }
+            e.target.value = formattedValue;
+        });
+    }
+    
+    const bicInput = document.getElementById('bic');
+    if (bicInput) {
+        bicInput.addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase();
+        });
+    }
+});
 </script>
 {% endblock %} 

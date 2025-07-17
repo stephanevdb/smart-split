@@ -1,5 +1,5 @@
-# Use Python 3.11 slim image
-FROM python:3.11-slim
+
+FROM python:3.13-slim
 
 # Set the working directory in the container
 WORKDIR /app
@@ -14,8 +14,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Expose the port that the Flask app will run on
-EXPOSE 5000
+EXPOSE 5066
 
-# Run the Flask application using Gunicorn
-# 'app:app' means: look for a file named 'app.py' and within it, find a Flask instance named 'app'.
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+CMD ["python3", "app.py"]

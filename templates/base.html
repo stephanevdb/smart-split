@@ -71,30 +71,13 @@
         </main>
         
         <footer class="footer">
-            <p>&copy; 2024 Smart Split PWA - Split expenses with friends</p>
+            <p>&copy; 2025 Smart Split - Split expenses with friends by <a href="https://github.com/stephanevdb/smart-split">Stéphane Van den Broeck</a></p>
         </footer>
     </div>
     
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     
-    <!-- Global Dark Mode Initialization -->
-    <script>
-    (function() {
-        // Initialize dark mode - default to enabled if no preference is stored
-        const darkMode = localStorage.getItem('darkMode');
-        const isDarkMode = darkMode === null ? true : darkMode === 'true';
-        
-        if (isDarkMode) {
-            document.body.classList.add('dark-mode');
-        }
-        
-        // Store the default preference if not set
-        if (darkMode === null) {
-            localStorage.setItem('darkMode', 'true');
-        }
-    })();
-    </script>
     
     {% block scripts %}{% endblock %}
 </body>

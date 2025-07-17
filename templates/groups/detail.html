@@ -14,6 +14,10 @@
                 <span class="btn-icon">➕</span>
                 Add Expense
             </a>
+            <a href="{{ url_for('scan_receipt', group_id=group.id) }}" class="btn btn-primary">
+                <span class="btn-icon">📷</span>
+                Scan Receipt
+            </a>
             <a href="{{ url_for('group_invite', group_id=group.id) }}" class="btn btn-secondary">
                 <span class="btn-icon">🤝</span>
                 Invite Members
@@ -121,6 +125,8 @@
 {% endblock %}
 
 {% block scripts %}
+<script type="application/json" id="balances-data">{{ balances|tojson }}</script>
+<script type="application/json" id="member-names-data">{{ member_names|tojson }}</script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     renderBalancesChart();
@@ -128,15 +134,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function renderBalancesChart() {
     const chartContainer = document.getElementById('balancesChart');
-    const balances = {{ balances|tojson }};
-    const memberNames = {{ member_names|tojson }};
+    const balancesData = JSON.parse(document.getElementById('balances-data').textContent);
+    const memberNames = JSON.parse(document.getElementById('member-names-data').textContent);
     
     let chartHTML = '<div class="balance-bars">';
     
-    for (const [userId, balance] of Object.entries(balances)) {
+    for (const [userId, balance] of Object.entries(balancesData)) {
         const userName = memberNames[userId];
         const absBalance = Math.abs(balance);
-        const maxBalance = Math.max(...Object.values(balances).map(Math.abs));
+        const maxBalance = Math.max(...Object.values(balancesData).map(Math.abs));
         const percentage = maxBalance > 0 ? (absBalance / maxBalance) * 100 : 0;
         
         chartHTML += `
@@ -147,9 +153,9 @@ function renderBalancesChart() {
                          style="width: ${percentage}%">
                     </div>
                 </div>
-                                 <div class="balance-bar-amount ${balance >= 0 ? 'positive' : 'negative'}">
-                     ${balance >= 0 ? '+' : '-'}€${absBalance.toFixed(2)}
-                 </div>
+                <div class="balance-bar-amount ${balance >= 0 ? 'positive' : 'negative'}">
+                    ${balance >= 0 ? '+' : '-'}€${absBalance.toFixed(2)}
+                </div>
             </div>
         `;
     }

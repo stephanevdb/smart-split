@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Scan Receipt - {{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-container">
+        <div class="form-header">
+            <h2>📷 Scan Receipt</h2>
+            <p>Upload a receipt for <strong>{{ group.name }}</strong></p>
+        </div>
+        
+        <div class="receipt-upload-container">
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">📁</div>
+                <h4>Upload Receipt Image</h4>
+                <p>Drag and drop your receipt here, or click to select</p>
+                <button type="button" class="btn btn-secondary" onclick="triggerFileSelect()">
+                    Choose File
+                </button>
+                <input type="file" id="receiptFileInput" accept="image/*" style="display: none;">
+            </div>
+            
+            <div class="upload-preview" id="uploadPreview" style="display: none;">
+                <div class="preview-header">
+                    <h4>Receipt Preview</h4>
+                    <button type="button" class="btn btn-small btn-secondary" onclick="removeReceipt()">Remove</button>
+                </div>
+                <div class="preview-image">
+                    <img id="previewImg" src="" alt="Receipt preview" style="max-width: 100%; max-height: 400px;">
+                </div>
+                <div class="receipt-info">
+                    <p><strong>File:</strong> <span id="fileName"></span></p>
+                    <p><strong>Size:</strong> <span id="fileSize"></span></p>
+                </div>
+            </div>
+            
+            <div class="receipt-actions" id="receiptActions" style="display: none;">
+                <form method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="receipt_file" id="hiddenFileInput">
+                    <button type="button" class="btn btn-primary" onclick="processReceipt()">
+                        <span class="btn-icon">🔍</span>
+                        Analyze Receipt
+                    </button>
+                </form>
+                <a href="{{ url_for('add_expense', group_id=group.id) }}" class="btn btn-secondary">
+                    Manual Entry Instead
+                </a>
+            </div>
+            
+            <div class="receipt-processing" id="receiptProcessing" style="display: none;">
+                <div class="processing-spinner">⏳</div>
+                <p>Analyzing receipt... This may take a moment.</p>
+            </div>
+        </div>
+        
+        <div class="navigation-actions">
+            <a href="{{ url_for('group_detail', group_id=group.id) }}" class="btn btn-secondary">
+                Back to Group
+            </a>
+            <a href="{{ url_for('add_expense', group_id=group.id) }}" class="btn btn-primary">
+                Add Expense Manually
+            </a>
+        </div>
+        
+        <div class="tips-card">
+            <h4>📋 Receipt Tips</h4>
+            <ul>
+                <li>Ensure the receipt is clearly visible and well-lit</li>
+                <li>Include the total amount and vendor name</li>
+                <li>JPG, PNG, and other common image formats are supported</li>
+                <li>Files should be under 10MB</li>
+                <li>You can always enter details manually if scanning doesn't work</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentReceiptFile = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeReceiptScanner();
+});
+
+function initializeReceiptScanner() {
+    const fileInput = document.getElementById('receiptFileInput');
+    const uploadZone = document.getElementById('uploadZone');
+    
+    if (!fileInput || !uploadZone) return;
+    
+    fileInput.addEventListener('change', handleFileSelect);
+    
+    // Drag and drop functionality
+    uploadZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadZone.classList.add('drag-over');
+    });
+    
+    uploadZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadZone.classList.remove('drag-over');
+    });
+    
+    uploadZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadZone.classList.remove('drag-over');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFile(files[0]);
+        }
+    });
+    
+    // Click to upload
+    uploadZone.addEventListener('click', function(e) {
+        if (e.target.tagName !== 'BUTTON') {
+            triggerFileSelect();
+        }
+    });
+}
+
+function triggerFileSelect() {
+    document.getElementById('receiptFileInput').click();
+}
+
+function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (file) {
+        handleFile(file);
+    }
+}
+
+function handleFile(file) {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        alert('Please select an image file.');
+        return;
+    }
+    
+    // Validate file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+        alert('File size must be less than 10MB.');
+        return;
+    }
+    
+    currentReceiptFile = file;
+    
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById('previewImg').src = e.target.result;
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = formatFileSize(file.size);
+        
+        document.getElementById('uploadZone').style.display = 'none';
+        document.getElementById('uploadPreview').style.display = 'block';
+        document.getElementById('receiptActions').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeReceipt() {
+    currentReceiptFile = null;
+    document.getElementById('uploadZone').style.display = 'block';
+    document.getElementById('uploadPreview').style.display = 'none';
+    document.getElementById('receiptActions').style.display = 'none';
+    document.getElementById('receiptProcessing').style.display = 'none';
+    document.getElementById('receiptFileInput').value = '';
+}
+
+function processReceipt() {
+    if (!currentReceiptFile) return;
+    
+    // Show processing state
+    document.getElementById('receiptActions').style.display = 'none';
+    document.getElementById('receiptProcessing').style.display = 'block';
+    
+    // Simulate processing for now (analysis logic will come later)
+    setTimeout(() => {
+        alert('Receipt analysis feature coming soon! Redirecting to manual entry...');
+        window.location.href = "{{ url_for('add_expense', group_id=group.id) }}";
+    }, 2000);
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+</script>
+{% endblock %} 
