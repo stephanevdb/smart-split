@@ -1,0 +1,32 @@
+# docker-compose.prod.yml
+# Production configuration
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+version: '3.8'
+
+services:
+  web:
+    container_name: smart-split-prod
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - DATABASE=/app/data/splitwise.db
+    volumes:
+      # Only mount data directory in production - static files are built into image
+      - smart_split_data:/app/data
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  smart_split_data:
+    driver: local 
