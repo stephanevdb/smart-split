@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Smart Split PWA{% endblock %}</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="A simple Progressive Web App template">
+    <meta name="theme-color" content="#2196F3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Smart Split PWA">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="{{ url_for('manifest') }}">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+            <div class="header-left">
+                <h1><a href="{{ url_for('index') }}">💰 Smart Split</a></h1>
+            </div>
+            <div class="header-right">
+                {% if current_user.is_authenticated %}
+                    <nav class="nav-menu">
+                        <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+                        <a href="{{ url_for('groups') }}" class="nav-link">Groups</a>
+                        <a href="{{ url_for('profile') }}" class="nav-link">Profile</a>
+                        <a href="{{ url_for('settings') }}" class="nav-link">Settings</a>
+                        <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+                    </nav>
+                    <span class="user-welcome">👋 {{ current_user.username }}</span>
+                {% else %}
+                    <nav class="nav-menu">
+                        <a href="{{ url_for('login') }}" class="nav-link">Login</a>
+                        <a href="{{ url_for('register') }}" class="nav-link">Register</a>
+                    </nav>
+                {% endif %}
+                <div class="install-prompt" id="installPrompt" style="display: none;">
+                    <button id="installBtn">Install App</button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}">
+                            <span>{{ message }}</span>
+                            <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        <main class="main">
+            {% block content %}{% endblock %}
+        </main>
+        
+        <footer class="footer">
+            <p>&copy; 2024 Smart Split PWA - Split expenses with friends</p>
+        </footer>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    
+    <!-- Global Dark Mode Initialization -->
+    <script>
+    (function() {
+        // Initialize dark mode - default to enabled if no preference is stored
+        const darkMode = localStorage.getItem('darkMode');
+        const isDarkMode = darkMode === null ? true : darkMode === 'true';
+        
+        if (isDarkMode) {
+            document.body.classList.add('dark-mode');
+        }
+        
+        // Store the default preference if not set
+        if (darkMode === null) {
+            localStorage.setItem('darkMode', 'true');
+        }
+    })();
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html> 

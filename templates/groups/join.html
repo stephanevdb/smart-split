@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Join Group - Smart Split PWA{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-container">
+        <div class="form-header">
+            <h2>🔗 Join a Group</h2>
+            <p>Enter an invite code to join an existing group</p>
+        </div>
+        
+        <div class="form-card">
+            <form method="POST" class="join-form">
+                <div class="form-group">
+                    <label for="invite_code" class="form-label">Invite Code</label>
+                    <input type="text" 
+                           id="invite_code" 
+                           name="invite_code" 
+                           class="form-input" 
+                           placeholder="Enter 8-character code (e.g., ABC12DEF)" 
+                           pattern="[A-Za-z0-9]{8}" 
+                           maxlength="8"
+                           required
+                           style="text-transform: uppercase; font-family: monospace; letter-spacing: 0.1rem;">
+                    <p class="invite-help">The invite code is 8 characters and case-insensitive</p>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <span class="btn-icon">🤝</span>
+                        Join Group
+                    </button>
+                    <a href="{{ url_for('groups') }}" class="btn btn-secondary btn-full">Cancel</a>
+                </div>
+            </form>
+        </div>
+        
+        <div class="tips-card">
+            <h4>💡 How to Join</h4>
+            <ul>
+                <li>Ask a group member to share their invite code with you</li>
+                <li>If you have an invite link, you can also click on it directly</li>
+                <li>The invite code is 8 characters long (like ABC12DEF)</li>
+                <li>Codes are case-insensitive - ABC12def works the same as ABC12DEF</li>
+            </ul>
+        </div>
+        
+        <div class="alternative-actions">
+            <p style="text-align: center; color: #666; margin: 1.5rem 0;">
+                Don't have an invite code? 
+                <a href="{{ url_for('create_group') }}" style="color: #2196F3; text-decoration: none; font-weight: 600;">Create your own group</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const inviteCodeInput = document.getElementById('invite_code');
+    
+    // Auto-format invite code input
+    inviteCodeInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+        if (value.length > 8) {
+            value = value.substring(0, 8);
+        }
+        e.target.value = value;
+    });
+    
+    // Handle paste events
+    inviteCodeInput.addEventListener('paste', function(e) {
+        e.preventDefault();
+        const paste = (e.clipboardData || window.clipboardData).getData('text');
+        
+        // Extract invite code from URL if pasted
+        let inviteCode = paste;
+        const urlMatch = paste.match(/\/join\/([A-Za-z0-9]{8})/);
+        if (urlMatch) {
+            inviteCode = urlMatch[1];
+        }
+        
+        // Clean and format
+        inviteCode = inviteCode.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+        if (inviteCode.length > 8) {
+            inviteCode = inviteCode.substring(0, 8);
+        }
+        
+        e.target.value = inviteCode;
+    });
+});
+</script>
+{% endblock %} 

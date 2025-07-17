@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Invite Members - {{ group.name }} - Smart Split PWA{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="invite-container">
+        <div class="invite-header">
+            <h2>🤝 Invite Members to {{ group.name }}</h2>
+            <p>Share this link with friends to invite them to join your group</p>
+        </div>
+        
+        <div class="invite-card">
+            <div class="invite-section">
+                <h3>📎 Invite Link</h3>
+                <div class="invite-link-container">
+                    <input type="text" id="inviteLink" value="{{ invite_link }}" readonly class="invite-link-input">
+                    <button onclick="copyInviteLink()" class="btn btn-secondary copy-btn">
+                        <span id="copyText">📋 Copy</span>
+                    </button>
+                </div>
+                <p class="invite-help">Anyone with this link can join your group</p>
+            </div>
+            
+            <div class="invite-section">
+                <h3>🔑 Invite Code</h3>
+                <div class="invite-code-display">
+                    <span class="invite-code">{{ group.invite_code }}</span>
+                </div>
+                <p class="invite-help">Share this code for manual entry</p>
+            </div>
+            
+            <div class="invite-actions">
+                <div class="share-buttons">
+                    <button onclick="shareInvite()" class="btn btn-primary">
+                        <span class="btn-icon">📤</span>
+                        Share Link
+                    </button>
+                    <button onclick="shareViaSMS()" class="btn btn-secondary">
+                        <span class="btn-icon">💬</span>
+                        Send SMS
+                    </button>
+                    <button onclick="shareViaEmail()" class="btn btn-secondary">
+                        <span class="btn-icon">📧</span>
+                        Send Email
+                    </button>
+                </div>
+                
+                <div class="invite-management">
+                    <form method="POST" action="{{ url_for('regenerate_invite_code', group_id=group.id) }}" 
+                          onsubmit="return confirm('This will invalidate the current invite link. Are you sure?')">
+                        <button type="submit" class="btn btn-warning">
+                            <span class="btn-icon">🔄</span>
+                            Generate New Code
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="invite-tips">
+            <h4>💡 Invitation Tips</h4>
+            <ul>
+                <li>Share the invite link via your preferred messaging app</li>
+                <li>The invite code never expires until you generate a new one</li>
+                <li>Anyone with the link can join immediately</li>
+                <li>You can regenerate the code if you want to invalidate old links</li>
+            </ul>
+        </div>
+        
+        <div class="back-actions">
+            <a href="{{ url_for('group_detail', group_id=group.id) }}" class="btn btn-secondary">
+                ← Back to Group
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyInviteLink() {
+    const inviteLink = document.getElementById('inviteLink');
+    const copyText = document.getElementById('copyText');
+    
+    inviteLink.select();
+    inviteLink.setSelectionRange(0, 99999); // For mobile devices
+    
+    try {
+        document.execCommand('copy');
+        copyText.textContent = '✅ Copied!';
+        setTimeout(() => {
+            copyText.textContent = '📋 Copy';
+        }, 2000);
+    } catch (err) {
+        // Fallback for modern browsers
+        navigator.clipboard.writeText(inviteLink.value).then(() => {
+            copyText.textContent = '✅ Copied!';
+            setTimeout(() => {
+                copyText.textContent = '📋 Copy';
+            }, 2000);
+        }).catch(() => {
+            copyText.textContent = '❌ Failed';
+            setTimeout(() => {
+                copyText.textContent = '📋 Copy';
+            }, 2000);
+        });
+    }
+}
+
+function shareInvite() {
+    const inviteLink = '{{ invite_link }}';
+    const groupName = '{{ group.name }}';
+    
+    if (navigator.share) {
+        navigator.share({
+            title: `Join ${groupName} on Smart Split`,
+            text: `You've been invited to join "${groupName}" on Smart Split PWA!`,
+            url: inviteLink
+        }).catch(err => console.log('Error sharing:', err));
+    } else {
+        // Fallback - copy to clipboard
+        copyInviteLink();
+    }
+}
+
+function shareViaSMS() {
+    const inviteLink = '{{ invite_link }}';
+    const groupName = '{{ group.name }}';
+    const message = `You've been invited to join "${groupName}" on Smart Split PWA! Click here to join: ${inviteLink}`;
+    
+    const smsUrl = `sms:?body=${encodeURIComponent(message)}`;
+    window.open(smsUrl);
+}
+
+function shareViaEmail() {
+    const inviteLink = '{{ invite_link }}';
+    const groupName = '{{ group.name }}';
+    const subject = `Invitation to join ${groupName} on Smart Split`;
+    const body = `Hi!
+
+You've been invited to join "${groupName}" on Smart Split PWA, where we split expenses and settle up easily.
+
+Click this link to join the group:
+${inviteLink}
+
+Or manually enter the invite code: {{ group.invite_code }}
+
+See you there!`;
+    
+    const emailUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(emailUrl);
+}
+</script>
+{% endblock %} 

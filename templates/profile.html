@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - Smart Split PWA{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="profile-header">
+        <h2>Your Profile</h2>
+        <p>Manage your account information and preferences</p>
+    </div>
+    
+    <div class="profile-content">
+        <div class="profile-card">
+            <div class="profile-avatar">
+                <div class="avatar-circle">
+                    {{ current_user.username[0].upper() }}
+                </div>
+            </div>
+            
+            <div class="profile-info">
+                <h3>{{ current_user.username }}</h3>
+                <p class="profile-email">{{ current_user.email }}</p>
+                <p class="profile-since">Member since {{ current_user.created_at.strftime('%B %Y') if current_user.created_at.strftime else current_user.created_at }}</p>
+            </div>
+        </div>
+        
+        <div class="profile-details">
+            <h3>Account Details</h3>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <label>User ID</label>
+                    <span>{{ current_user.id }}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Username</label>
+                    <span>{{ current_user.username }}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Email Address</label>
+                    <span>{{ current_user.email }}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Account Created</label>
+                    <span id="fullCreatedDate">{{ current_user.created_at }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="profile-actions">
+            <h3>Account Actions</h3>
+            <div class="action-buttons">
+                <button class="btn btn-secondary" onclick="loadUserStats()">Refresh Stats</button>
+                <a href="{{ url_for('settings') }}" class="btn btn-primary">Edit Settings</a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+            </div>
+        </div>
+        
+        <div class="profile-stats">
+            <h3>Account Statistics</h3>
+            <div id="userStatsContainer">
+                <p>Loading statistics...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadUserStats();
+    
+    // Format the full created date
+    const fullDate = new Date('{{ current_user.created_at }}');
+    document.getElementById('fullCreatedDate').textContent = fullDate.toLocaleString();
+});
+
+async function loadUserStats() {
+    const container = document.getElementById('userStatsContainer');
+    container.innerHTML = '<p class="loading">Loading statistics...</p>';
+    
+    try {
+        const response = await fetch('/api/user/stats');
+        if (response.status === 401) {
+            container.innerHTML = '<p class="error">Session expired. Please <a href="/login">login again</a>.</p>';
+            return;
+        }
+        
+        const stats = await response.json();
+        const memberSince = new Date(stats.member_since);
+        const now = new Date();
+        const diffTime = Math.abs(now - memberSince);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        container.innerHTML = `
+            <div class="stats-display">
+                <div class="stat-box">
+                    <span class="stat-number">${diffDays}</span>
+                    <span class="stat-label">Days as Member</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number">${stats.id}</span>
+                    <span class="stat-label">User ID</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number">${stats.username.length}</span>
+                    <span class="stat-label">Username Length</span>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        container.innerHTML = '<p class="error">Failed to load statistics.</p>';
+    }
+}
+</script>
+{% endblock %} 

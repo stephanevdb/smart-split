@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Create Group - Smart Split PWA{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-container">
+        <div class="form-header">
+            <h2>👥 Create New Group</h2>
+            <p>Start splitting expenses with your friends</p>
+        </div>
+        
+        <div class="form-card">
+            <form method="POST" class="group-form">
+                {{ form.hidden_tag() }}
+                
+                <div class="form-group">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="form-input", placeholder="e.g., Weekend Trip, Roommates, Dinner Party") }}
+                    {% if form.name.errors %}
+                        <div class="form-errors">
+                            {% for error in form.name.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.description.label(class="form-label") }}
+                    {{ form.description(class="form-textarea", placeholder="Optional: Describe what this group is for", rows="3") }}
+                    {% if form.description.errors %}
+                        <div class="form-errors">
+                            {% for error in form.description.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-actions">
+                    {{ form.submit(class="btn btn-primary btn-full") }}
+                    <a href="{{ url_for('groups') }}" class="btn btn-secondary btn-full">Cancel</a>
+                </div>
+            </form>
+        </div>
+        
+        <div class="tips-card">
+            <h4>💡 Tips for group names</h4>
+            <ul>
+                <li>Use descriptive names like "Vacation 2024" or "Apartment Expenses"</li>
+                <li>Include the purpose or timeframe</li>
+                <li>Keep it simple and memorable</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %} 

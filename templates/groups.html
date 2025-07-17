@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}My Groups - Smart Split PWA{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h2>👥 My Groups</h2>
+        <div class="page-actions">
+            <a href="{{ url_for('create_group') }}" class="btn btn-primary">
+                <span class="btn-icon">➕</span>
+                Create New Group
+            </a>
+            <a href="{{ url_for('join_group_form') }}" class="btn btn-secondary">
+                <span class="btn-icon">🔗</span>
+                Join Group
+            </a>
+        </div>
+    </div>
+    
+    {% if groups %}
+        <div class="groups-list">
+            {% for group in groups %}
+                <div class="group-item">
+                    <div class="group-info">
+                        <h3>
+                            <a href="{{ url_for('group_detail', group_id=group.id) }}">{{ group.name }}</a>
+                        </h3>
+                        <p class="group-description">{{ group.description or "No description" }}</p>
+                        <div class="group-meta">
+                            <span class="created-by">Created by {{ group.creator_name }}</span>
+                            <span class="created-date">{{ group.created_at.strftime('%B %d, %Y') if group.created_at.strftime else group.created_at }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="group-balance" id="group-balance-{{ group.id }}">
+                        <span class="loading">Loading...</span>
+                    </div>
+                    
+                    <div class="group-actions">
+                        <a href="{{ url_for('group_detail', group_id=group.id) }}" class="btn btn-secondary">View</a>
+                        <a href="{{ url_for('add_expense', group_id=group.id) }}" class="btn btn-primary">Add Expense</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">👥</div>
+            <h3>No groups yet</h3>
+            <p>Create your first group to start splitting expenses with friends!</p>
+            <a href="{{ url_for('create_group') }}" class="btn btn-primary">Create Your First Group</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadAllGroupBalances();
+});
+
+async function loadAllGroupBalances() {
+    const groupBalanceElements = document.querySelectorAll('[id^="group-balance-"]');
+    
+    for (const element of groupBalanceElements) {
+        const groupId = element.id.split('-')[2];
+        
+        try {
+            const response = await fetch(`/api/groups/${groupId}/balances`);
+            const data = await response.json();
+            
+            const userBalance = data.balances[{{ current_user.id }}] || 0;
+            
+            if (userBalance > 0) {
+                                 element.innerHTML = `
+                     <div class="balance-display positive">
+                         <span class="balance-label">You are owed</span>
+                         <span class="balance-amount">€${userBalance.toFixed(2)}</span>
+                     </div>
+                 `;
+             } else if (userBalance < 0) {
+                 element.innerHTML = `
+                     <div class="balance-display negative">
+                         <span class="balance-label">You owe</span>
+                         <span class="balance-amount">€${Math.abs(userBalance).toFixed(2)}</span>
+                     </div>
+                 `;
+             } else {
+                 element.innerHTML = `
+                     <div class="balance-display neutral">
+                         <span class="balance-label">Settled up</span>
+                         <span class="balance-amount">€0.00</span>
+                     </div>
+                 `;
+            }
+        } catch (error) {
+            element.innerHTML = `<span class="balance-error">Error loading balance</span>`;
+        }
+    }
+}
+</script>
+{% endblock %} 

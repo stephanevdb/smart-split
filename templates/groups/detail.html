@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}{{ group.name }} - Smart Split PWA{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="group-header">
+        <div class="group-title">
+            <h2>👥 {{ group.name }}</h2>
+            <p>{{ group.description or "No description" }}</p>
+        </div>
+        <div class="group-actions">
+            <a href="{{ url_for('add_expense', group_id=group.id) }}" class="btn btn-primary">
+                <span class="btn-icon">➕</span>
+                Add Expense
+            </a>
+            <a href="{{ url_for('group_invite', group_id=group.id) }}" class="btn btn-secondary">
+                <span class="btn-icon">🤝</span>
+                Invite Members
+            </a>
+            <a href="{{ url_for('groups') }}" class="btn btn-secondary">Back to Groups</a>
+        </div>
+    </div>
+    
+    <!-- Group Members -->
+    <div class="group-members">
+        <h3>Members ({{ members|length }})</h3>
+        <div class="members-list">
+            {% for member in members %}
+                <div class="member-card">
+                    <div class="member-avatar">{{ member.username[0].upper() }}</div>
+                    <div class="member-info">
+                        <span class="member-name">{{ member.username }}</span>
+                        <span class="member-balance" id="member-balance-{{ member.id }}">
+                            {% set balance = balances.get(member.id, 0) %}
+                            {% if balance > 0 %}
+                                <span class="positive">+€{{ "%.2f"|format(balance) }}</span>
+                            {% elif balance < 0 %}
+                                <span class="negative">-€{{ "%.2f"|format(-balance) }}</span>
+                            {% else %}
+                                <span class="neutral">€0.00</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Settle Up Section -->
+    {% if simplified_debts %}
+        <div class="settle-up-section">
+            <h3>💰 Suggested Settlements</h3>
+            <div class="settlements-list">
+                {% for debt in simplified_debts %}
+                    <div class="settlement-item">
+                        <div class="settlement-info">
+                            <span class="settlement-text">
+                                <strong>{{ member_names[debt.from] }}</strong> 
+                                owes 
+                                <strong>{{ member_names[debt.to] }}</strong>
+                            </span>
+                            <span class="settlement-amount">€{{ "%.2f"|format(debt.amount) }}</span>
+                        </div>
+                        {% if debt.from == current_user.id %}
+                            <a href="{{ url_for('settle_debt', group_id=group.id, payee_id=debt.to) }}" 
+                               class="btn btn-primary btn-small">Settle Up</a>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <div class="settle-up-section">
+            <div class="all-settled">
+                <div class="settled-icon">✅</div>
+                <h3>All settled up!</h3>
+                <p>Everyone in this group is squared away.</p>
+            </div>
+        </div>
+    {% endif %}
+    
+    <!-- Recent Expenses -->
+    <div class="expenses-section">
+        <h3>💸 Recent Expenses</h3>
+        {% if expenses %}
+            <div class="expenses-list">
+                {% for expense in expenses %}
+                    <div class="expense-item">
+                        <div class="expense-info">
+                            <h4>{{ expense.description }}</h4>
+                            <div class="expense-meta">
+                                <span class="paid-by">Paid by <strong>{{ expense.paid_by_name }}</strong></span>
+                                <span class="expense-date">{{ expense.created_at.strftime('%B %d, %Y') if expense.created_at.strftime else expense.created_at }}</span>
+                            </div>
+                        </div>
+                        <div class="expense-amount">
+                            <span class="amount">€{{ "%.2f"|format(expense.amount) }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-expenses">
+                <div class="empty-icon">💸</div>
+                <h4>No expenses yet</h4>
+                <p>Add your first expense to start tracking!</p>
+                <a href="{{ url_for('add_expense', group_id=group.id) }}" class="btn btn-primary">Add First Expense</a>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Balances Overview -->
+    <div class="balances-section">
+        <h3>📊 Balance Overview</h3>
+        <div class="balances-chart" id="balancesChart">
+            <!-- Balances will be rendered here -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    renderBalancesChart();
+});
+
+function renderBalancesChart() {
+    const chartContainer = document.getElementById('balancesChart');
+    const balances = {{ balances|tojson }};
+    const memberNames = {{ member_names|tojson }};
+    
+    let chartHTML = '<div class="balance-bars">';
+    
+    for (const [userId, balance] of Object.entries(balances)) {
+        const userName = memberNames[userId];
+        const absBalance = Math.abs(balance);
+        const maxBalance = Math.max(...Object.values(balances).map(Math.abs));
+        const percentage = maxBalance > 0 ? (absBalance / maxBalance) * 100 : 0;
+        
+        chartHTML += `
+            <div class="balance-bar-item">
+                <div class="balance-bar-label">${userName}</div>
+                <div class="balance-bar-container">
+                    <div class="balance-bar ${balance >= 0 ? 'positive' : 'negative'}" 
+                         style="width: ${percentage}%">
+                    </div>
+                </div>
+                                 <div class="balance-bar-amount ${balance >= 0 ? 'positive' : 'negative'}">
+                     ${balance >= 0 ? '+' : '-'}€${absBalance.toFixed(2)}
+                 </div>
+            </div>
+        `;
+    }
+    
+    chartHTML += '</div>';
+    chartContainer.innerHTML = chartHTML;
+}
+</script>
+{% endblock %} 

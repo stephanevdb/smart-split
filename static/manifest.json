@@ -1,0 +1,81 @@
+{
+    "name": "Smart Split - Expense Sharing",
+    "short_name": "Smart Split",
+    "description": "Split expenses with friends and track balances easily",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#f5f5f5",
+    "theme_color": "#2196F3",
+    "orientation": "portrait-primary",
+    "scope": "/",
+    "lang": "en-US",
+    "categories": ["finance", "productivity", "utilities"],
+    "icons": [
+        {
+            "src": "/static/icons/icon-72x72.png",
+            "sizes": "72x72",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "/static/icons/icon-96x96.png",
+            "sizes": "96x96",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "/static/icons/icon-128x128.png",
+            "sizes": "128x128",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "/static/icons/icon-144x144.png",
+            "sizes": "144x144",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "/static/icons/icon-152x152.png",
+            "sizes": "152x152",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "/static/icons/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "/static/icons/icon-384x384.png",
+            "sizes": "384x384",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "/static/icons/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable any"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Dashboard",
+            "short_name": "Dashboard",
+            "description": "View your expense dashboard",
+            "url": "/dashboard",
+            "icons": [{ "src": "/static/icons/icon-96x96.png", "sizes": "96x96" }]
+        },
+        {
+            "name": "Create Group",
+            "short_name": "New Group",
+            "description": "Create a new expense group",
+            "url": "/groups/create",
+            "icons": [{ "src": "/static/icons/icon-96x96.png", "sizes": "96x96" }]
+        }
+    ],
+    "screenshots": [],
+    "prefer_related_applications": false
+} 

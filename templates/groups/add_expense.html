@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+
+{% block title %}Add Expense - {{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-container">
+        <div class="form-header">
+            <h2>💸 Add Expense</h2>
+            <p>Split a new expense in <strong>{{ group.name }}</strong></p>
+        </div>
+        
+        <div class="form-card">
+            <form method="POST" class="expense-form">
+                {{ form.hidden_tag() }}
+                
+                <div class="form-group">
+                    {{ form.description.label(class="form-label") }}
+                    {{ form.description(class="form-input", placeholder="e.g., Dinner at restaurant, Gas for trip, Groceries") }}
+                    {% if form.description.errors %}
+                        <div class="form-errors">
+                            {% for error in form.description.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.amount.label(class="form-label") }}
+                    <div class="amount-input-container">
+                        <span class="currency-symbol">€</span>
+                        {{ form.amount(class="form-input amount-input", placeholder="0.00", step="0.01") }}
+                    </div>
+                    {% if form.amount.errors %}
+                        <div class="form-errors">
+                            {% for error in form.amount.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.paid_by.label(class="form-label") }}
+                    {{ form.paid_by(class="form-select") }}
+                    {% if form.paid_by.errors %}
+                        <div class="form-errors">
+                            {% for error in form.paid_by.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.split_type.label(class="form-label") }}
+                    <div class="split-type-options">
+                        {% for subfield in form.split_type %}
+                            <div class="split-type-option">
+                                {{ subfield }}
+                                {{ subfield.label }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% if form.split_type.errors %}
+                        <div class="form-errors">
+                            {% for error in form.split_type.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.split_among.label(class="form-label") }}
+                    <div class="split-options">
+                        <div class="split-header">
+                            <button type="button" class="btn btn-small btn-secondary" onclick="selectAllMembers()">Select All</button>
+                            <button type="button" class="btn btn-small btn-secondary" onclick="clearAllMembers()">Clear All</button>
+                        </div>
+                        <div class="members-checkbox-list">
+                            {% for subfield in form.split_among %}
+                                <div class="member-checkbox">
+                                    {{ subfield }}
+                                    {{ subfield.label }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% if form.split_among.errors %}
+                        <div class="form-errors">
+                            {% for error in form.split_among.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Custom amounts section -->
+                    <div class="custom-amounts-section" id="customAmountsSection" style="display: none;">
+                        <h5>Enter custom amounts for each person:</h5>
+                        <div class="custom-amounts-list" id="customAmountsList">
+                            <!-- Custom amount inputs will be added here dynamically -->
+                        </div>
+                        <div class="custom-amounts-summary" id="customAmountsSummary">
+                            <!-- Summary will be shown here -->
+                        </div>
+                    </div>
+                    
+                    <div class="split-preview" id="splitPreview">
+                        <!-- Split preview will be shown here -->
+                    </div>
+                </div>
+                
+                {{ form.custom_amounts() }}
+                
+                <div class="form-actions">
+                    {{ form.submit(class="btn btn-primary btn-full") }}
+                    <a href="{{ url_for('group_detail', group_id=group.id) }}" class="btn btn-secondary btn-full">Cancel</a>
+                </div>
+            </form>
+        </div>
+        
+        <div class="tips-card">
+            <h4>💡 Expense Tips</h4>
+            <ul>
+                <li>Be descriptive in your expense descriptions</li>
+                <li>Double-check the amount before submitting</li>
+                <li>Only select people who should split this expense</li>
+                <li>Choose equal split or enter custom amounts for each person</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default paid_by to current user if available
+    const paidBySelect = document.getElementById('paid_by');
+    if (paidBySelect) {
+        paidBySelect.value = {{ current_user.id }};
+    }
+    
+    // Select all members by default
+    selectAllMembers();
+    
+    // Add listeners for split type change
+    const splitTypeRadios = document.querySelectorAll('input[name="split_type"]');
+    splitTypeRadios.forEach(radio => {
+        radio.addEventListener('change', handleSplitTypeChange);
+    });
+    
+    // Add listeners for split preview
+    const amountInput = document.getElementById('amount');
+    const splitCheckboxes = document.querySelectorAll('input[name="split_among"]');
+    
+    if (amountInput) {
+        amountInput.addEventListener('input', updateDisplay);
+    }
+    
+    splitCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateDisplay);
+    });
+    
+    // Initialize display
+    handleSplitTypeChange();
+    updateDisplay();
+});
+
+function selectAllMembers() {
+    const checkboxes = document.querySelectorAll('input[name="split_among"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    updateDisplay();
+}
+
+function clearAllMembers() {
+    const checkboxes = document.querySelectorAll('input[name="split_among"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateDisplay();
+}
+
+function handleSplitTypeChange() {
+    const splitType = document.querySelector('input[name="split_type"]:checked').value;
+    const customAmountsSection = document.getElementById('customAmountsSection');
+    const splitPreview = document.getElementById('splitPreview');
+    
+    if (splitType === 'custom') {
+        customAmountsSection.style.display = 'block';
+        splitPreview.style.display = 'none';
+        updateCustomAmounts();
+    } else {
+        customAmountsSection.style.display = 'none';
+        splitPreview.style.display = 'block';
+        updateSplitPreview();
+    }
+}
+
+function updateDisplay() {
+    const splitType = document.querySelector('input[name="split_type"]:checked')?.value || 'equal';
+    
+    if (splitType === 'custom') {
+        updateCustomAmounts();
+    } else {
+        updateSplitPreview();
+    }
+}
+
+function updateCustomAmounts() {
+    const selectedMembers = document.querySelectorAll('input[name="split_among"]:checked');
+    const customAmountsList = document.getElementById('customAmountsList');
+    const amount = parseFloat(document.getElementById('amount').value) || 0;
+    
+    // Clear existing inputs
+    customAmountsList.innerHTML = '';
+    
+    if (selectedMembers.length === 0) {
+        return;
+    }
+    
+    const equalShare = amount / selectedMembers.length;
+    
+    selectedMembers.forEach(checkbox => {
+        const memberId = checkbox.value;
+        const memberName = checkbox.nextElementSibling.textContent.trim();
+        
+        const inputGroup = document.createElement('div');
+        inputGroup.className = 'custom-amount-input-group';
+        
+        inputGroup.innerHTML = `
+            <label class="custom-amount-label">${memberName}:</label>
+            <div class="amount-input-container">
+                <span class="currency-symbol">€</span>
+                <input type="number" 
+                       class="form-input amount-input custom-amount-input" 
+                       data-member-id="${memberId}" 
+                       placeholder="${equalShare.toFixed(2)}" 
+                       step="0.01" 
+                       min="0"
+                       oninput="updateCustomAmountsSummary()">
+            </div>
+        `;
+        
+        customAmountsList.appendChild(inputGroup);
+    });
+    
+    updateCustomAmountsSummary();
+}
+
+function updateCustomAmountsSummary() {
+    const customInputs = document.querySelectorAll('.custom-amount-input');
+    const summaryContainer = document.getElementById('customAmountsSummary');
+    const totalAmount = parseFloat(document.getElementById('amount').value) || 0;
+    
+    let totalCustom = 0;
+    let customAmounts = {};
+    
+    customInputs.forEach(input => {
+        const amount = parseFloat(input.value) || 0;
+        totalCustom += amount;
+        customAmounts[input.dataset.memberId] = amount;
+    });
+    
+    // Update hidden field with custom amounts
+    document.getElementById('custom_amounts').value = JSON.stringify(customAmounts);
+    
+    const difference = totalAmount - totalCustom;
+    const isValid = Math.abs(difference) < 0.01;
+    
+    let summaryHTML = `
+        <div class="custom-amounts-summary-content">
+            <p><strong>Total entered:</strong> €${totalCustom.toFixed(2)}</p>
+            <p><strong>Expense amount:</strong> €${totalAmount.toFixed(2)}</p>
+    `;
+    
+    if (!isValid && totalAmount > 0) {
+        if (difference > 0) {
+            summaryHTML += `<p class="error"><strong>Missing:</strong> €${difference.toFixed(2)}</p>`;
+        } else {
+            summaryHTML += `<p class="error"><strong>Over by:</strong> €${Math.abs(difference).toFixed(2)}</p>`;
+        }
+    } else if (isValid && totalAmount > 0) {
+        summaryHTML += `<p class="success">✓ Amounts match!</p>`;
+    }
+    
+    summaryHTML += '</div>';
+    summaryContainer.innerHTML = summaryHTML;
+}
+
+function updateSplitPreview() {
+    const amount = parseFloat(document.getElementById('amount').value) || 0;
+    const selectedMembers = document.querySelectorAll('input[name="split_among"]:checked');
+    const previewContainer = document.getElementById('splitPreview');
+    
+    if (amount > 0 && selectedMembers.length > 0) {
+        const shareAmount = amount / selectedMembers.length;
+        
+        let previewHTML = `
+            <div class="split-preview-content">
+                <h5>Equal Split Preview:</h5>
+                <p><strong>€${shareAmount.toFixed(2)}</strong> per person (${selectedMembers.length} people)</p>
+                <div class="split-breakdown">
+        `;
+        
+        selectedMembers.forEach(checkbox => {
+            const memberName = checkbox.nextElementSibling.textContent.trim();
+            previewHTML += `<span class="split-item">${memberName}: €${shareAmount.toFixed(2)}</span>`;
+        });
+        
+        previewHTML += `
+                </div>
+            </div>
+        `;
+        
+        previewContainer.innerHTML = previewHTML;
+        previewContainer.style.display = 'block';
+    } else {
+        previewContainer.style.display = 'none';
+    }
+}
+</script>
+{% endblock %} 

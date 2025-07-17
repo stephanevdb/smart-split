@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Smart Split PWA{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="settings-header">
+        <h2>Settings</h2>
+        <p>Customize your Smart Split PWA experience</p>
+    </div>
+    
+    <div class="settings-content">
+        <div class="settings-section">
+            <h3>🔧 App Preferences</h3>
+            <div class="setting-item">
+                <label for="darkMode">Dark Mode</label>
+                <input type="checkbox" id="darkMode" onchange="toggleDarkMode()">
+                <span class="setting-description">Enable dark theme for better night viewing</span>
+            </div>
+            
+            <div class="setting-item">
+                <label for="notifications">Push Notifications</label>
+                <input type="checkbox" id="notifications" onchange="toggleNotifications()">
+                <span class="setting-description">Receive notifications for important updates</span>
+            </div>
+            
+            <div class="setting-item">
+                <label for="autoSave">Auto Save</label>
+                <input type="checkbox" id="autoSave" checked onchange="toggleAutoSave()">
+                <span class="setting-description">Automatically save your progress</span>
+            </div>
+        </div>
+        
+        <div class="settings-section">
+            <h3>👤 Account Information</h3>
+            <div class="account-summary">
+                <p><strong>Username:</strong> {{ current_user.username }}</p>
+                <p><strong>Email:</strong> {{ current_user.email }}</p>
+                <p><strong>Account Type:</strong> Standard User</p>
+                <p><strong>Status:</strong> <span class="status-active">Active</span></p>
+            </div>
+        </div>
+        
+        <div class="settings-section">
+            <h3>🔒 Security</h3>
+            <div class="security-options">
+                <button class="btn btn-secondary" onclick="showPasswordChange()">Change Password</button>
+                <button class="btn btn-secondary" onclick="showSessionInfo()">View Sessions</button>
+                <button class="btn btn-warning" onclick="confirmLogoutAll()">Logout All Devices</button>
+            </div>
+            
+            <div id="passwordChangeForm" class="password-form" style="display: none;">
+                <h4>Change Password</h4>
+                <form onsubmit="changePassword(event)">
+                    <div class="form-group">
+                        <label>Current Password</label>
+                        <input type="password" id="currentPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label>New Password</label>
+                        <input type="password" id="newPassword" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm New Password</label>
+                        <input type="password" id="confirmPassword" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Update Password</button>
+                        <button type="button" class="btn btn-secondary" onclick="hidePasswordChange()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="settings-section">
+            <h3>📱 PWA Settings</h3>
+            <div class="pwa-info">
+                <p><strong>Installation Status:</strong> <span id="installStatus">Checking...</span></p>
+                <p><strong>Service Worker:</strong> <span id="swStatus">Checking...</span></p>
+                <p><strong>Offline Mode:</strong> <span id="offlineStatus">Available</span></p>
+            </div>
+            <div class="pwa-actions">
+                <button class="btn btn-secondary" onclick="updateServiceWorker()">Update App</button>
+                <button class="btn btn-secondary" onclick="clearCache()">Clear Cache</button>
+            </div>
+        </div>
+        
+        <div class="settings-section">
+            <h3>⚠️ Danger Zone</h3>
+            <div class="danger-actions">
+                <button class="btn btn-danger" onclick="confirmDeleteAccount()">Delete Account</button>
+                <p class="danger-warning">This action cannot be undone. All your data will be permanently deleted.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    checkPWAStatus();
+    loadUserPreferences();
+});
+
+function toggleDarkMode() {
+    const enabled = document.getElementById('darkMode').checked;
+    localStorage.setItem('darkMode', enabled);
+    if (enabled) {
+        document.body.classList.add('dark-mode');
+    } else {
+        document.body.classList.remove('dark-mode');
+    }
+}
+
+function toggleNotifications() {
+    const enabled = document.getElementById('notifications').checked;
+    localStorage.setItem('notifications', enabled);
+    if (enabled && 'Notification' in window) {
+        Notification.requestPermission();
+    }
+}
+
+function toggleAutoSave() {
+    const enabled = document.getElementById('autoSave').checked;
+    localStorage.setItem('autoSave', enabled);
+}
+
+function loadUserPreferences() {
+    // Dark mode defaults to true if not set
+    const darkMode = localStorage.getItem('darkMode');
+    const isDarkMode = darkMode === null ? true : darkMode === 'true';
+    
+    document.getElementById('darkMode').checked = isDarkMode;
+    document.getElementById('notifications').checked = localStorage.getItem('notifications') === 'true';
+    document.getElementById('autoSave').checked = localStorage.getItem('autoSave') !== 'false';
+    
+    // Dark mode is already applied globally, but ensure consistency
+    if (isDarkMode) {
+        document.body.classList.add('dark-mode');
+    } else {
+        document.body.classList.remove('dark-mode');
+    }
+}
+
+function showPasswordChange() {
+    document.getElementById('passwordChangeForm').style.display = 'block';
+}
+
+function hidePasswordChange() {
+    document.getElementById('passwordChangeForm').style.display = 'none';
+}
+
+function changePassword(event) {
+    event.preventDefault();
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (newPassword !== confirmPassword) {
+        alert('New passwords do not match');
+        return;
+    }
+    
+    // Here you would implement actual password change
+    alert('Password change functionality would be implemented here');
+    hidePasswordChange();
+}
+
+function showSessionInfo() {
+    alert('Current session info:\nLogin time: ' + new Date().toLocaleString());
+}
+
+function confirmLogoutAll() {
+    if (confirm('Are you sure you want to logout from all devices?')) {
+        window.location.href = '/logout';
+    }
+}
+
+function confirmDeleteAccount() {
+    if (confirm('Are you sure you want to delete your account? This cannot be undone.')) {
+        if (confirm('This will permanently delete all your data. Are you absolutely sure?')) {
+            alert('Account deletion would be implemented here');
+        }
+    }
+}
+
+function checkPWAStatus() {
+    // Check installation status
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        document.getElementById('installStatus').textContent = 'Installed';
+    } else {
+        document.getElementById('installStatus').textContent = 'Not Installed';
+    }
+    
+    // Check service worker status
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(() => {
+            document.getElementById('swStatus').textContent = 'Active';
+        });
+    } else {
+        document.getElementById('swStatus').textContent = 'Not Supported';
+    }
+}
+
+function updateServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then((registration) => {
+            registration.update().then(() => {
+                alert('App updated successfully!');
+            });
+        });
+    }
+}
+
+function clearCache() {
+    if ('caches' in window) {
+        caches.keys().then((names) => {
+            names.forEach(name => {
+                caches.delete(name);
+            });
+            alert('Cache cleared successfully!');
+        });
+    }
+}
+</script>
+{% endblock %} 
