@@ -59,15 +59,20 @@ smart-split/
 #### Development with Docker
 1. **Clone the repository**
 
-2. **Run with Docker Compose (Development):**
+2. **Run with Docker Compose (Development with hot reloading):**
+   ```bash
+   docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+   ```
+   This will start the app in development mode with hot reloading for both code and static files.
+
+3. **Or run in production mode locally:**
    ```bash
    docker-compose up --build
    ```
-   This will start the app in development mode with hot reloading.
 
-3. **Open your browser and navigate to:**
+4. **Open your browser and navigate to:**
    ```
-   http://localhost:3000
+   http://localhost:3066
    ```
 
 #### Production with Docker
@@ -84,7 +89,7 @@ smart-split/
    # Run the container
    docker run -d \
      --name smart-split-app \
-     -p 3000:3000 \
+     -p 3066:3000 \
      -v $(pwd)/data:/app/data \
      -e SECRET_KEY=your-production-secret-key \
      smart-split
@@ -93,7 +98,8 @@ smart-split/
 #### Docker Commands
 - **Stop containers:** `docker-compose down`
 - **View logs:** `docker-compose logs -f`
-- **Rebuild:** `docker-compose up --build`
+- **Rebuild production:** `docker-compose up --build`
+- **Rebuild development:** `docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build`
 - **Production logs:** `docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f`
 
 #### Environment Variables
@@ -101,6 +107,21 @@ Set these environment variables for production:
 - `SECRET_KEY`: Your Flask secret key (required for production)
 - `DATABASE`: Database file path (default: `/app/data/splitwise.db`)
 - `FLASK_ENV`: Set to `production` for production deployment
+
+#### Troubleshooting Docker
+
+**Static files not loading (CSS/JS missing):**
+- Make sure you're not mounting static files as volumes in production
+- Rebuild the container: `docker-compose up --build`
+- Check that static files exist in the container: `docker exec -it smart-split-web ls -la /app/static/`
+
+**Database not persisting:**
+- Ensure the `./data` directory exists on your host
+- Check volume mounts: `docker-compose config`
+
+**Container not starting:**
+- Check logs: `docker-compose logs -f`
+- Verify port 3066 is not in use: `lsof -i :3066`
 
 ## PWA Features
 
