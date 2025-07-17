@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: smart-split-web
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount database directory for persistence
+      - ./data:/app/data
+      # Mount static files for development (optional)
+      - ./static:/app/static
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=your-secret-key-change-in-production
+      - DATABASE=/app/data/splitwise.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  smart_split_data:
+    driver: local 

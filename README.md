@@ -35,6 +35,8 @@ smart-split/
 
 ## Installation & Setup
 
+### Option 1: Local Installation
+
 1. **Clone or download this repository**
 
 2. **Install dependencies:**
@@ -49,8 +51,56 @@ smart-split/
 
 4. **Open your browser and navigate to:**
    ```
-   http://localhost:5000
+   http://localhost:3000
    ```
+
+### Option 2: Docker Installation
+
+#### Development with Docker
+1. **Clone the repository**
+
+2. **Run with Docker Compose (Development):**
+   ```bash
+   docker-compose up --build
+   ```
+   This will start the app in development mode with hot reloading.
+
+3. **Open your browser and navigate to:**
+   ```
+   http://localhost:3000
+   ```
+
+#### Production with Docker
+1. **Run with production configuration:**
+   ```bash
+   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+   ```
+
+2. **Or build and run manually:**
+   ```bash
+   # Build the image
+   docker build -t smart-split .
+   
+   # Run the container
+   docker run -d \
+     --name smart-split-app \
+     -p 3000:3000 \
+     -v $(pwd)/data:/app/data \
+     -e SECRET_KEY=your-production-secret-key \
+     smart-split
+   ```
+
+#### Docker Commands
+- **Stop containers:** `docker-compose down`
+- **View logs:** `docker-compose logs -f`
+- **Rebuild:** `docker-compose up --build`
+- **Production logs:** `docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f`
+
+#### Environment Variables
+Set these environment variables for production:
+- `SECRET_KEY`: Your Flask secret key (required for production)
+- `DATABASE`: Database file path (default: `/app/data/splitwise.db`)
+- `FLASK_ENV`: Set to `production` for production deployment
 
 ## PWA Features
 
@@ -98,13 +148,28 @@ smart-split/
 
 ### Deployment
 For production deployment:
+
+#### Traditional Deployment
 1. Set `debug=False` in `app.py`
 2. Use a production WSGI server like Gunicorn:
    ```bash
-   gunicorn -w 4 -b 0.0.0.0:5000 app:app
+   gunicorn -w 4 -b 0.0.0.0:3000 app:app
    ```
-3. Configure HTTPS (required for PWA features)
-4. Update manifest start_url for your domain
+
+#### Docker Deployment (Recommended)
+1. Use the production Docker configuration:
+   ```bash
+   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+   ```
+2. Set the `SECRET_KEY` environment variable:
+   ```bash
+   export SECRET_KEY=your-secure-production-key
+   ```
+
+#### General Requirements
+1. Configure HTTPS (required for PWA features)
+2. Update manifest start_url for your domain
+3. Ensure database persistence (Docker volumes handle this automatically)
 
 ## Browser Support
 

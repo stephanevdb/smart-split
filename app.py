@@ -13,8 +13,8 @@ from collections import defaultdict
 import json
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-change-in-production'
-app.config['DATABASE'] = 'splitwise.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
+app.config['DATABASE'] = os.environ.get('DATABASE', 'splitwise.db')
 
 # Initialize Flask-Login
 login_manager = LoginManager()
