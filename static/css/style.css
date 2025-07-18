@@ -2414,6 +2414,99 @@ body {
     width: 100%;
 }
 
+.footer-links {
+    margin-top: var(--space-2);
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+/* Privacy Policy Styles */
+.privacy-content {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.privacy-section {
+    margin-bottom: var(--space-8);
+    padding: var(--space-6);
+    background: var(--gray-50);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--gray-200);
+}
+
+.privacy-section h3 {
+    color: var(--primary-600);
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.privacy-section h3::before {
+    content: "📄";
+    font-size: 1rem;
+}
+
+.privacy-section p {
+    color: var(--gray-700);
+    line-height: 1.7;
+    margin-bottom: var(--space-4);
+}
+
+.privacy-section ul {
+    margin: var(--space-4) 0;
+    padding-left: var(--space-6);
+}
+
+.privacy-section li {
+    color: var(--gray-600);
+    line-height: 1.6;
+    margin-bottom: var(--space-2);
+}
+
+.privacy-section li strong {
+    color: var(--gray-800);
+    font-weight: var(--font-weight-semibold);
+}
+
+.privacy-footer {
+    background: var(--primary-50);
+    border: 1px solid var(--primary-200);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    text-align: center;
+    margin-top: var(--space-8);
+}
+
+.privacy-footer p {
+    color: var(--primary-700);
+    margin-bottom: var(--space-2);
+}
+
+.privacy-footer p:last-child {
+    margin-bottom: 0;
+    font-style: italic;
+    color: var(--primary-600);
+}
+
+/* Mobile Privacy Policy */
+@media (max-width: 768px) {
+    .privacy-section {
+        padding: var(--space-4);
+        margin-bottom: var(--space-6);
+    }
+    
+    .privacy-section h3 {
+        font-size: 1.1rem;
+    }
+    
+    .privacy-section ul {
+        padding-left: var(--space-4);
+    }
+}
+
 /* Bank Details Section */
 .bank-details-form {
     background: #f8f9fa;

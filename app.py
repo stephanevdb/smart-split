@@ -1617,6 +1617,11 @@ def api_dashboard_summary():
         'net_balance': round(total_owed_to_you - total_you_owe, 2)
     })
 
+@app.route('/privacy-policy')
+def privacy_policy():
+    """Privacy policy page"""
+    return render_template('privacy_policy.html')
+
 if __name__ == '__main__':
     init_db()
     ensure_upload_folder()
