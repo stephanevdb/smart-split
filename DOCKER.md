@@ -119,7 +119,18 @@ docker compose restart smart-split
 
 ### Permission issues
 ```bash
-# Fix permissions for data directories
+# The container runs as uid:999, so fix permissions accordingly:
+
+# Option 1: Use the helper script
+./fix-permissions.sh
+
+# Option 2: Manual fix with sudo
+sudo chown -R 999:999 data/ uploads/
+
+# Option 3: Make directories world-writable (less secure but works)
+chmod 777 data/ uploads/
+
+# Option 4: Fix ownership to current user (alternative)
 sudo chown -R $USER:$USER data uploads
 ```
 

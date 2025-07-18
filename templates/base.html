@@ -31,21 +31,32 @@
                 <h1><a href="{{ url_for('index') }}">💰 Smart Split</a></h1>
             </div>
             <div class="header-right">
-                {% if current_user.is_authenticated %}
-                    <nav class="nav-menu">
-                        <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
-                        <a href="{{ url_for('groups') }}" class="nav-link">Groups</a>
-                        <a href="{{ url_for('profile') }}" class="nav-link">Profile</a>
-                        <a href="{{ url_for('settings') }}" class="nav-link">Settings</a>
-                        <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
-                    </nav>
-                    <span class="user-welcome">👋 {{ current_user.username }}</span>
-                {% else %}
-                    <nav class="nav-menu">
-                        <a href="{{ url_for('login') }}" class="nav-link">Login</a>
-                        <a href="{{ url_for('register') }}" class="nav-link">Register</a>
-                    </nav>
-                {% endif %}
+                <!-- Mobile Menu Toggle -->
+                <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+                    <span class="hamburger-line"></span>
+                    <span class="hamburger-line"></span>
+                    <span class="hamburger-line"></span>
+                </button>
+                
+                <!-- Navigation Menu -->
+                <div class="nav-container" id="navContainer">
+                    {% if current_user.is_authenticated %}
+                        <nav class="nav-menu">
+                            <a href="{{ url_for('dashboard') }}" class="nav-link">📊 Dashboard</a>
+                            <a href="{{ url_for('groups') }}" class="nav-link">👥 Groups</a>
+                            <a href="{{ url_for('profile') }}" class="nav-link">👤 Profile</a>
+                            <a href="{{ url_for('settings') }}" class="nav-link">⚙️ Settings</a>
+                            <a href="{{ url_for('logout') }}" class="nav-link">🚪 Logout</a>
+                        </nav>
+                        <span class="user-welcome">👋 {{ current_user.username }}</span>
+                    {% else %}
+                        <nav class="nav-menu">
+                            <a href="{{ url_for('login') }}" class="nav-link">🔑 Login</a>
+                            <a href="{{ url_for('register') }}" class="nav-link">📝 Register</a>
+                        </nav>
+                    {% endif %}
+                </div>
+                
                 <div class="install-prompt" id="installPrompt" style="display: none;">
                     <button id="installBtn">Install App</button>
                 </div>

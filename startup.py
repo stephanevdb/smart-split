@@ -42,7 +42,11 @@ def initialize_application():
         # Check if we can write to the database directory
         if not os.access(db_dir, os.W_OK):
             logger.error(f"❌ No write permission to database directory: {db_dir}")
-            # Try to fix permissions
+            logger.error("🔧 Please run on the host machine:")
+            logger.error("   sudo chown -R 999:999 data/ uploads/")
+            logger.error("   OR chmod 777 data/ uploads/")
+            logger.error("   OR run ./fix-permissions.sh")
+            # Try to fix permissions (but this usually won't work in Docker)
             try:
                 os.chmod(db_dir, 0o755)
                 logger.info("🔧 Fixed directory permissions")
