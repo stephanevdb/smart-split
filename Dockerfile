@@ -17,15 +17,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p uploads data
-
-# Make entrypoint script executable
-RUN chmod +x docker-entrypoint.sh
-
 # Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser
-RUN chown -R appuser:appuser /app
+
+# Create necessary directories with proper permissions
+RUN mkdir -p uploads data && \
+    chmod +x docker-entrypoint.sh && \
+    chown -R appuser:appuser /app
+
 USER appuser
 
 # Expose port

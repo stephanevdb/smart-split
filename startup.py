@@ -18,9 +18,37 @@ def initialize_application():
     try:
         logger.info("🚀 Starting Smart Split application initialization...")
         
+        # Check current user and permissions
+        import pwd
+        user_info = pwd.getpwuid(os.getuid())
+        logger.info(f"👤 Running as user: {user_info.pw_name} (uid: {os.getuid()})")
+        
         # Ensure upload folder exists
         logger.info("📁 Creating upload directories...")
         ensure_upload_folder()
+        
+        # Check database directory permissions
+        import app
+        db_path = app.app.config['DATABASE']
+        db_dir = os.path.dirname(db_path)
+        logger.info(f"🗄️  Database path: {db_path}")
+        logger.info(f"📂 Database directory: {db_dir}")
+        
+        # Create database directory if it doesn't exist
+        if not os.path.exists(db_dir):
+            logger.info(f"📁 Creating database directory: {db_dir}")
+            os.makedirs(db_dir, exist_ok=True)
+        
+        # Check if we can write to the database directory
+        if not os.access(db_dir, os.W_OK):
+            logger.error(f"❌ No write permission to database directory: {db_dir}")
+            # Try to fix permissions
+            try:
+                os.chmod(db_dir, 0o755)
+                logger.info("🔧 Fixed directory permissions")
+            except Exception as perm_error:
+                logger.error(f"❌ Could not fix permissions: {perm_error}")
+                raise
         
         # Initialize database
         logger.info("🗄️  Initializing database...")
@@ -30,6 +58,8 @@ def initialize_application():
         
     except Exception as e:
         logger.error(f"❌ Application initialization failed: {e}")
+        import traceback
+        logger.error(f"📋 Full error traceback: {traceback.format_exc()}")
         sys.exit(1)
 
 if __name__ == "__main__":
