@@ -15,6 +15,7 @@
                 <div class="upload-icon">📁</div>
                 <h4>Upload Receipt Image</h4>
                 <p>Drag and drop your receipt here, or click to select</p>
+                <small>Analysis will start automatically after upload</small>
                 <button type="button" class="btn btn-secondary" onclick="triggerFileSelect()">
                     Choose File
                 </button>
@@ -35,22 +36,15 @@
                 </div>
             </div>
             
-            <div class="receipt-actions" id="receiptActions" style="display: none;">
-                <form method="POST" enctype="multipart/form-data">
-                    <input type="hidden" name="receipt_file" id="hiddenFileInput">
-                    <button type="button" class="btn btn-primary" onclick="processReceipt()">
-                        <span class="btn-icon">🔍</span>
-                        Analyze Receipt
-                    </button>
-                </form>
-                <a href="{{ url_for('add_expense', group_id=group.id) }}" class="btn btn-secondary">
-                    Manual Entry Instead
-                </a>
-            </div>
+            <!-- Hidden form for automatic submission -->
+            <form method="POST" enctype="multipart/form-data" id="receiptForm" style="display: none;">
+                <input type="file" name="receipt_file" id="hiddenFileInput">
+            </form>
             
             <div class="receipt-processing" id="receiptProcessing" style="display: none;">
                 <div class="processing-spinner">⏳</div>
-                <p>Analyzing receipt... This may take a moment.</p>
+                <p>Automatically analyzing receipt with AI... This may take a moment.</p>
+                <small>We're extracting individual items and prices from your receipt automatically</small>
             </div>
         </div>
         
@@ -69,7 +63,8 @@
                 <li>Ensure the receipt is clearly visible and well-lit</li>
                 <li>Include the total amount and vendor name</li>
                 <li>JPG, PNG, and other common image formats are supported</li>
-                <li>Files should be under 10MB</li>
+                <li>Files should be under 7MB</li>
+                <li>Analysis starts automatically after upload - no button needed!</li>
                 <li>You can always enter details manually if scanning doesn't work</li>
             </ul>
         </div>
@@ -140,13 +135,19 @@ function handleFile(file) {
         return;
     }
     
-    // Validate file size (10MB limit)
-    if (file.size > 10 * 1024 * 1024) {
-        alert('File size must be less than 10MB.');
+    // Validate file size (7MB limit)
+    if (file.size > 7 * 1024 * 1024) {
+        alert('File size must be less than 7MB.');
         return;
     }
     
     currentReceiptFile = file;
+    
+    // Update the hidden file input with the selected file
+    const hiddenInput = document.getElementById('hiddenFileInput');
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    hiddenInput.files = dataTransfer.files;
     
     // Show preview
     const reader = new FileReader();
@@ -157,7 +158,14 @@ function handleFile(file) {
         
         document.getElementById('uploadZone').style.display = 'none';
         document.getElementById('uploadPreview').style.display = 'block';
-        document.getElementById('receiptActions').style.display = 'block';
+        
+        // Show processing state immediately instead of action buttons
+        document.getElementById('receiptProcessing').style.display = 'block';
+        
+        // Auto-submit the form after a brief delay to show the preview
+        setTimeout(function() {
+            document.getElementById('receiptForm').submit();
+        }, 500);
     };
     reader.readAsDataURL(file);
 }
@@ -166,24 +174,12 @@ function removeReceipt() {
     currentReceiptFile = null;
     document.getElementById('uploadZone').style.display = 'block';
     document.getElementById('uploadPreview').style.display = 'none';
-    document.getElementById('receiptActions').style.display = 'none';
     document.getElementById('receiptProcessing').style.display = 'none';
     document.getElementById('receiptFileInput').value = '';
+    document.getElementById('hiddenFileInput').value = '';
 }
 
-function processReceipt() {
-    if (!currentReceiptFile) return;
-    
-    // Show processing state
-    document.getElementById('receiptActions').style.display = 'none';
-    document.getElementById('receiptProcessing').style.display = 'block';
-    
-    // Simulate processing for now (analysis logic will come later)
-    setTimeout(() => {
-        alert('Receipt analysis feature coming soon! Redirecting to manual entry...');
-        window.location.href = "{{ url_for('add_expense', group_id=group.id) }}";
-    }, 2000);
-}
+// Clean up function - processing state is now handled in handleFile function
 
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes';

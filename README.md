@@ -9,6 +9,8 @@ A simple Progressive Web App (PWA) template built with Flask. This template prov
 - ⚡ **Fast Loading**: Quick loading with efficient caching
 - 📲 **Responsive**: Works great on all devices and screen sizes
 - 🎨 **Modern UI**: Beautiful and modern user interface
+- 🤖 **AI Receipt Analysis**: Automatically extract items from receipt photos using Gemini AI
+- 💰 **Smart Expense Splitting**: Select which group members consumed each item
 - 🔔 **Push Notifications**: Ready for push notification implementation
 - 🔄 **Background Sync**: Prepared for background synchronization
 
@@ -18,8 +20,13 @@ A simple Progressive Web App (PWA) template built with Flask. This template prov
 smart-split/
 ├── app.py                 # Main Flask application
 ├── requirements.txt       # Python dependencies
+├── .env                   # Environment variables (create from .env.example)
+├── .env.example          # Environment variables template
 ├── templates/            # HTML templates
 │   ├── base.html         # Base template with PWA features
+│   ├── groups/           # Group-related templates
+│   │   ├── scan_receipt.html      # Receipt upload page
+│   │   └── select_receipt_items.html # AI item selection page
 │   ├── index.html        # Main page
 │   └── offline.html      # Offline fallback page
 ├── static/              # Static assets
@@ -30,6 +37,7 @@ smart-split/
 │   ├── icons/           # PWA icons (various sizes)
 │   ├── manifest.json    # PWA manifest file
 │   └── sw.js           # Service worker
+├── uploads/             # Uploaded receipt images
 └── README.md           # This file
 ```
 
@@ -44,12 +52,22 @@ smart-split/
    pip install -r requirements.txt
    ```
 
-3. **Run the application:**
+3. **Set up environment variables (optional for AI features):**
+   ```bash
+   # Copy the example environment file
+   cp .env.example .env
+   
+   # Edit .env and add your Gemini API key for receipt analysis
+   # GEMINI_API_KEY=your-actual-api-key-here
+   ```
+   Get your API key from: https://aistudio.google.com/app/apikey
+
+4. **Run the application:**
    ```bash
    python app.py
    ```
 
-4. **Open your browser and navigate to:**
+5. **Open your browser and navigate to:**
    ```
    http://localhost:3000
    ```

@@ -1,0 +1,474 @@
+{% extends "base.html" %}
+
+{% block title %}Select Items - {{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-container">
+        <div class="form-header">
+            <h2>🍽️ Select Your Items</h2>
+            <p>From <strong>{{ receipt_analysis['store_name'] or "Receipt" }}</strong> • Total: €{{ "%.2f"|format(receipt_analysis['total_amount']) }}</p>
+        </div>
+        
+        <form method="POST" id="itemSelectionForm">
+            <input type="hidden" id="confirmedPayments" name="confirmed_payments" value="">
+            <div class="receipt-items-container">
+                <div class="receipt-summary">
+                    <h3>📋 Receipt Items</h3>
+                    <p>Select which group members consumed each item. Items can be shared between multiple people.</p>
+                </div>
+                
+                <div class="payer-selection">
+                    <h4>💳 Who paid this bill?</h4>
+                    <select name="bill_payer" id="billPayer" class="user-dropdown" required>
+                        <option value="">Select who paid the bill...</option>
+                        {% for member in members %}
+                            <option value="{{ member['id'] }}" {% if member['id'] == current_user.id %}selected{% endif %}>
+                                {{ member['username'] }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="items-list">
+                    {% for item in receipt_analysis['items'] %}
+                        <div class="item-card">
+                            <div class="item-info">
+                                <div class="item-name">{{ item.name }}</div>
+                                <div class="item-price">€{{ "%.2f"|format(item.price) }}</div>
+                            </div>
+                            
+                            <div class="item-selection">
+                                <div class="selection-row">
+                                    <div class="selection-main">
+                                        <select name="item_{{ loop.index0 }}_user" class="user-dropdown">
+                                            <option value="">Select who had this item...</option>
+                                            {% for member in members %}
+                                                <option value="{{ member['id'] }}">{{ member['username'] }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="split-option">
+                                        <label class="split-checkbox">
+                                            <input type="checkbox" 
+                                                   name="item_{{ loop.index0 }}_split" 
+                                                   onchange="toggleSplitMode({{ loop.index0 }})">
+                                            <span class="checkbox-custom"></span>
+                                            Split
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="split-members" id="split-members-{{ loop.index0 }}" style="display: none;">
+                                    <div class="split-checkboxes">
+                                        {% for member in members %}
+                                            <label class="member-checkbox">
+                                                <input type="checkbox" 
+                                                       name="item_{{ loop.index0 }}_users" 
+                                                       value="{{ member['id'] }}">
+                                                <span class="checkbox-custom"></span>
+                                                <span class="member-name">{{ member['username'] }}</span>
+                                            </label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                
+                                <div class="item-split-info" id="item-{{ loop.index0 }}-split">
+                                    <span class="split-text">Select who had this item</span>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="selection-summary" id="selectionSummary">
+                    <h3>💰 Your Total</h3>
+                    <div class="summary-content">
+                        <p>Select items to see your total amount</p>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                        <span class="btn-icon">✅</span>
+                        Add Selected Items
+                    </button>
+                    <a href="{{ url_for('scan_receipt', group_id=group.id) }}" class="btn btn-secondary">
+                        Back to Upload
+                    </a>
+                    <a href="{{ url_for('add_expense', group_id=group.id) }}" class="btn btn-secondary">
+                        Manual Entry Instead
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- QR Code Modal -->
+<div class="modal" id="qrModal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>💳 Payment QR Code</h3>
+            <button class="modal-close" onclick="closeQRModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="qrContent">
+                <div class="qr-loading">
+                    <div class="loading-spinner">⏳</div>
+                    <p>Generating QR code...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="application/json" id="receipt-items-data">{{ receipt_analysis['items']|tojson }}</script>
+<script type="application/json" id="members-data">{{ members|tojson }}</script>
+<script>
+let receiptItems = [];
+let members = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    receiptItems = JSON.parse(document.getElementById('receipt-items-data').textContent);
+    members = JSON.parse(document.getElementById('members-data').textContent);
+    
+    // Add event listeners to all split checkboxes for real-time updates
+    document.querySelectorAll('input[name*="_users"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateItemSummary();
+        });
+    });
+    
+    // Add event listeners to all user dropdowns for real-time updates
+    document.querySelectorAll('select[name*="_user"]').forEach(dropdown => {
+        dropdown.addEventListener('change', function() {
+            updateItemSummary();
+        });
+    });
+    
+    // Add event listener to bill payer dropdown
+    const billPayerDropdown = document.getElementById('billPayer');
+    if (billPayerDropdown) {
+        billPayerDropdown.addEventListener('change', function() {
+            updateItemSummary();
+        });
+    }
+    
+    updateItemSummary();
+});
+
+function toggleSplitMode(itemIndex) {
+    const splitCheckbox = document.querySelector(`input[name="item_${itemIndex}_split"]`);
+    const dropdown = document.querySelector(`select[name="item_${itemIndex}_user"]`);
+    const splitMembers = document.getElementById(`split-members-${itemIndex}`);
+    const checkboxes = document.querySelectorAll(`input[name="item_${itemIndex}_users"]`);
+    
+    if (splitCheckbox && splitCheckbox.checked) {
+        // Enable split mode
+        if (dropdown) {
+            dropdown.style.display = 'none';
+            dropdown.value = ''; // Clear dropdown selection
+        }
+        if (splitMembers) {
+            splitMembers.style.display = 'block';
+        }
+    } else {
+        // Disable split mode
+        if (dropdown) {
+            dropdown.style.display = 'block';
+        }
+        if (splitMembers) {
+            splitMembers.style.display = 'none';
+        }
+        // Clear all checkboxes
+        checkboxes.forEach(cb => {
+            if (cb) cb.checked = false;
+        });
+    }
+    
+    // Force immediate update
+    updateItemSummary();
+}
+
+function updateItemSummary() {
+    const submitBtn = document.getElementById('submitBtn');
+    const summaryContent = document.querySelector('.summary-content');
+    const billPayerDropdown = document.getElementById('billPayer');
+    
+    let totalSelected = 0;
+    let userTotals = {};
+    let hasSelections = false;
+    let hasBillPayer = billPayerDropdown && billPayerDropdown.value !== '';
+    
+    // Initialize user totals
+    members.forEach(member => {
+        userTotals[member.id] = { name: member.username, amount: 0 };
+    });
+    
+    // Calculate totals for each item
+    receiptItems.forEach((item, index) => {
+        const splitCheckbox = document.querySelector(`input[name="item_${index}_split"]`);
+        const dropdown = document.querySelector(`select[name="item_${index}_user"]`);
+        const checkboxes = document.querySelectorAll(`input[name="item_${index}_users"]:checked`);
+        const splitInfo = document.getElementById(`item-${index}-split`);
+        
+        const itemPrice = item.price || 0;
+        
+        let selectedUsers = [];
+        let selectedNames = [];
+        
+        // Determine which mode we're in and process accordingly
+        const isInSplitMode = splitCheckbox && splitCheckbox.checked;
+        
+        if (isInSplitMode) {
+            // Split mode - use checkboxes only
+            if (checkboxes.length > 0) {
+                hasSelections = true;
+                const numberOfPeople = checkboxes.length;
+                const splitAmount = Math.round((itemPrice / numberOfPeople) * 100) / 100;
+                
+                checkboxes.forEach(checkbox => {
+                    const userId = parseInt(checkbox.value);
+                    selectedUsers.push(userId);
+                    userTotals[userId].amount += splitAmount;
+                    const memberName = members.find(m => m.id === userId)?.username || 'Unknown';
+                    selectedNames.push(memberName);
+                });
+                
+                if (splitInfo) {
+                    splitInfo.innerHTML = `
+                        <span class="split-text">
+                            Split between ${selectedNames.join(', ')} • €${splitAmount.toFixed(2)} each
+                            <small>(€${itemPrice.toFixed(2)} ÷ ${numberOfPeople} people)</small>
+                        </span>
+                    `;
+                }
+            } else {
+                if (splitInfo) {
+                    splitInfo.innerHTML = '<span class="split-text">Select people to split with</span>';
+                }
+            }
+        } else if (dropdown && dropdown.value) {
+            // Single user mode - use dropdown only (and ensure not in split mode)
+            hasSelections = true;
+            const userId = parseInt(dropdown.value);
+            selectedUsers.push(userId);
+            userTotals[userId].amount += itemPrice;
+            const userName = members.find(m => m.id === userId)?.username || 'Unknown';
+            
+            if (splitInfo) {
+                splitInfo.innerHTML = `
+                    <span class="split-text">
+                        ${userName} • €${itemPrice.toFixed(2)}
+                    </span>
+                `;
+            }
+        } else {
+            // No selection made
+            if (splitInfo) {
+                splitInfo.innerHTML = '<span class="split-text">Select who had this item</span>';
+            }
+        }
+    });
+    
+    // Update summary
+    if (hasSelections && hasBillPayer) {
+        let summaryHTML = '<div class="user-totals">';
+        
+        Object.values(userTotals).forEach(user => {
+            if (user.amount > 0) {
+                // Check if this payment has been confirmed
+                const isConfirmed = isPaymentConfirmed(user.name, user.amount);
+                
+                if (isConfirmed) {
+                    // Show confirmed payment with different styling
+                    summaryHTML += `
+                        <div class="user-total confirmed-payment">
+                            <span class="user-name">${user.name}</span>
+                            <span class="user-amount confirmed">€${user.amount.toFixed(2)} ✅ Paid</span>
+                        </div>
+                    `;
+                } else {
+                    // Show unpaid amount with payment button
+                    summaryHTML += `
+                        <div class="user-total">
+                            <span class="user-name">${user.name}</span>
+                            <span class="user-amount">€${user.amount.toFixed(2)}</span>
+                            <button type="button" class="btn btn-small btn-qr" onclick="generatePaymentQR('${user.name}', ${user.amount.toFixed(2)})">
+                                📱 Pay
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+        });
+        
+        summaryHTML += '</div>';
+        summaryContent.innerHTML = summaryHTML;
+        submitBtn.disabled = false;
+    } else {
+        let message = '';
+        if (!hasBillPayer && !hasSelections) {
+            message = '<p>Select who paid the bill and assign items to see totals</p>';
+        } else if (!hasBillPayer) {
+            message = '<p>Select who paid the bill to continue</p>';
+        } else if (!hasSelections) {
+            message = '<p>Select items to see your total amount</p>';
+        }
+        summaryContent.innerHTML = message;
+        submitBtn.disabled = true;
+    }
+}
+
+function generatePaymentQR(payerName, amount) {
+    const billPayerDropdown = document.getElementById('billPayer');
+    const billPayerId = billPayerDropdown ? billPayerDropdown.value : null;
+    
+    if (!billPayerId) {
+        alert('Please select who paid the bill first');
+        return;
+    }
+    
+    // Show modal with loading state
+    const modal = document.getElementById('qrModal');
+    const qrContent = document.getElementById('qrContent');
+    
+    qrContent.innerHTML = `
+        <div class="qr-loading">
+            <div class="loading-spinner">⏳</div>
+            <p>Generating QR code...</p>
+        </div>
+    `;
+    
+    modal.style.display = 'flex';
+    
+    // Generate QR code
+    const reference = `Payment from ${payerName} for receipt`;
+    const url = `/api/generate_payment_qr?amount=${amount}&payer_id=${billPayerId}&reference=${encodeURIComponent(reference)}`;
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                qrContent.innerHTML = `
+                    <div class="qr-error">
+                        <div class="error-icon">❌</div>
+                        <h4>Error</h4>
+                        <p>${data.error}</p>
+                        ${data.error.includes('bank details') ? 
+                            '<p><small>The person who paid needs to add their bank details in settings.</small></p>' : 
+                            ''
+                        }
+                    </div>
+                `;
+            } else {
+                qrContent.innerHTML = `
+                    <div class="qr-success">
+                        <div class="qr-info">
+                            <h4>Pay €${amount} to ${data.recipient}</h4>
+                            <p>IBAN: ${data.iban}</p>
+                            <p><small>Scan with your banking app</small></p>
+                        </div>
+                        <div class="qr-code-container">
+                            <img src="${data.qr_code}" alt="Payment QR Code" class="qr-code-image">
+                        </div>
+                        <div class="qr-instructions">
+                            <p><strong>Instructions:</strong></p>
+                            <ol>
+                                <li>Open your banking app</li>
+                                <li>Look for "QR Pay" or "Scan to Pay"</li>
+                                <li>Scan this QR code</li>
+                                <li>Confirm the payment</li>
+                            </ol>
+                        </div>
+                        <div class="qr-actions">
+                            <button type="button" class="btn btn-success btn-full" onclick="confirmPayment('${payerName}', ${amount})">
+                                ✅ I've Made This Payment
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            qrContent.innerHTML = `
+                <div class="qr-error">
+                    <div class="error-icon">❌</div>
+                    <h4>Connection Error</h4>
+                    <p>Could not generate QR code. Please try again.</p>
+                </div>
+            `;
+        });
+}
+
+function closeQRModal() {
+    document.getElementById('qrModal').style.display = 'none';
+}
+
+// Track confirmed payments
+let confirmedPayments = new Set();
+
+function confirmPayment(payerName, amount) {
+    // Store the confirmed payment
+    const paymentKey = `${payerName}_${amount}`;
+    confirmedPayments.add(paymentKey);
+    
+    // Close the modal
+    closeQRModal();
+    
+    // Update the UI to show payment as confirmed
+    updatePaymentConfirmationUI();
+    
+    // Show confirmation message
+    showPaymentConfirmation(payerName, amount);
+}
+
+function updatePaymentConfirmationUI() {
+    // Update user totals to hide confirmed payments
+    updateCalculations();
+    
+    // Update the hidden field with confirmed payments
+    const confirmedPaymentsField = document.getElementById('confirmedPayments');
+    if (confirmedPaymentsField) {
+        confirmedPaymentsField.value = JSON.stringify(Array.from(confirmedPayments));
+    }
+}
+
+function showPaymentConfirmation(payerName, amount) {
+    // Create a temporary notification
+    const notification = document.createElement('div');
+    notification.className = 'payment-confirmation-toast';
+    notification.innerHTML = `
+        <div class="toast-content">
+            <span class="toast-icon">✅</span>
+            <span class="toast-message">Payment of €${amount.toFixed(2)} by ${payerName} confirmed!</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 3000);
+}
+
+function isPaymentConfirmed(userName, amount) {
+    const paymentKey = `${userName}_${amount}`;
+    return confirmedPayments.has(paymentKey);
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('qrModal');
+    if (event.target === modal) {
+        closeQRModal();
+    }
+});
+</script>
+{% endblock %} 

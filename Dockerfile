@@ -1,19 +1,39 @@
+# Multi-stage build for Python Flask application
+FROM python:3.11-slim AS base
 
-FROM python:3.13-slim
-
-# Set the working directory in the container
+# Set working directory
 WORKDIR /app
 
-# Copy the requirements file into the container at /app
-COPY requirements.txt .
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install any needed packages specified in requirements.txt
+# Install Python dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code into the container at /app
+# Copy application code
 COPY . .
 
-# Expose the port that the Flask app will run on
-EXPOSE 5066
+# Create necessary directories
+RUN mkdir -p uploads data
 
-CMD ["python3", "app.py"]
+# Make entrypoint script executable
+RUN chmod +x docker-entrypoint.sh
+
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN chown -R appuser:appuser /app
+USER appuser
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/ || exit 1
+
+# Set the entrypoint
+ENTRYPOINT ["./docker-entrypoint.sh"] 

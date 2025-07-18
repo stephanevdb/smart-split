@@ -22,6 +22,12 @@
                 <span class="btn-icon">🤝</span>
                 Invite Members
             </a>
+            {% if group.created_by == current_user.id %}
+                <a href="{{ url_for('group_admin', group_id=group.id) }}" class="btn btn-warning">
+                    <span class="btn-icon">🛠️</span>
+                    Admin
+                </a>
+            {% endif %}
             <a href="{{ url_for('groups') }}" class="btn btn-secondary">Back to Groups</a>
         </div>
     </div>
@@ -67,8 +73,22 @@
                             <span class="settlement-amount">€{{ "%.2f"|format(debt.amount) }}</span>
                         </div>
                         {% if debt.from == current_user.id %}
-                            <a href="{{ url_for('settle_debt', group_id=group.id, payee_id=debt.to) }}" 
-                               class="btn btn-primary btn-small">Settle Up</a>
+                            <div class="settlement-actions">
+                                <button type="button" class="btn btn-success btn-small mark-paid-btn" 
+                                        data-payee-id="{{ debt.to }}" 
+                                        data-amount="{{ debt.amount }}" 
+                                        data-payee-name="{{ member_names[debt.to] }}">
+                                    ✅ Mark as Paid
+                                </button>
+                                <button type="button" class="btn btn-warning btn-small mark-partial-btn" 
+                                        data-payee-id="{{ debt.to }}" 
+                                        data-max-amount="{{ debt.amount }}" 
+                                        data-payee-name="{{ member_names[debt.to] }}">
+                                    💳 Partial Amount
+                                </button>
+                                <a href="{{ url_for('settle_debt', group_id=group.id, payee_id=debt.to) }}" 
+                                   class="btn btn-secondary btn-small">Advanced</a>
+                            </div>
                         {% endif %}
                     </div>
                 {% endfor %}
@@ -83,6 +103,13 @@
             </div>
         </div>
     {% endif %}
+    <!-- Balances Overview -->
+    <div class="balances-section">
+        <h3>📊 Balance Overview</h3>
+        <div class="balances-chart" id="balancesChart">
+            <!-- Balances will be rendered here -->
+        </div>
+    </div>
     
     <!-- Recent Expenses -->
     <div class="expenses-section">
@@ -114,23 +141,170 @@
         {% endif %}
     </div>
     
-    <!-- Balances Overview -->
-    <div class="balances-section">
-        <h3>📊 Balance Overview</h3>
-        <div class="balances-chart" id="balancesChart">
-            <!-- Balances will be rendered here -->
-        </div>
-    </div>
+    
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script type="application/json" id="balances-data">{{ balances|tojson }}</script>
 <script type="application/json" id="member-names-data">{{ member_names|tojson }}</script>
+<script type="application/json" id="group-data">{{ {"id": group.id}|tojson }}</script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     renderBalancesChart();
+    setupMarkAsPaidButtons();
 });
+
+function setupMarkAsPaidButtons() {
+    document.querySelectorAll('.mark-paid-btn').forEach(button => {
+        button.addEventListener('click', handleMarkAsPaid);
+    });
+    
+    document.querySelectorAll('.mark-partial-btn').forEach(button => {
+        button.addEventListener('click', handleMarkPartial);
+    });
+}
+
+async function handleMarkAsPaid(event) {
+    const button = event.target;
+    const payeeId = button.dataset.payeeId;
+    const amount = parseFloat(button.dataset.amount);
+    const payeeName = button.dataset.payeeName;
+    
+    // Show confirmation dialog
+    if (!confirm(`Mark €${amount.toFixed(2)} as paid to ${payeeName}?\n\nThis will record that you have paid this amount.`)) {
+        return;
+    }
+    
+    // Disable button and show loading state
+    button.disabled = true;
+    const originalText = button.innerHTML;
+    button.innerHTML = '⏳ Recording...';
+    
+    try {
+        const response = await fetch('/api/quick-settle', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+                         body: JSON.stringify({
+                 group_id: JSON.parse(document.getElementById('group-data').textContent).id,
+                 payee_id: parseInt(payeeId),
+                 amount: amount
+             })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Show success message
+            showNotification(`Payment of €${amount.toFixed(2)} to ${payeeName} recorded!`, 'success');
+            
+            // Refresh the page to update balances
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            throw new Error(data.error || 'Failed to record payment');
+        }
+    } catch (error) {
+        // Restore button state
+        button.disabled = false;
+        button.innerHTML = originalText;
+        
+        showNotification(`Error: ${error.message}`, 'error');
+    }
+}
+
+async function handleMarkPartial(event) {
+    const button = event.target;
+    const payeeId = button.dataset.payeeId;
+    const maxAmount = parseFloat(button.dataset.maxAmount);
+    const payeeName = button.dataset.payeeName;
+    
+    // Prompt for amount
+    const amountStr = prompt(`Enter the amount you paid to ${payeeName}:\n(Maximum: €${maxAmount.toFixed(2)})`);
+    
+    if (!amountStr) {
+        return; // User cancelled
+    }
+    
+    const amount = parseFloat(amountStr);
+    
+    if (isNaN(amount) || amount <= 0) {
+        showNotification('Please enter a valid positive amount', 'error');
+        return;
+    }
+    
+    if (amount > maxAmount) {
+        showNotification(`Amount cannot exceed €${maxAmount.toFixed(2)}`, 'error');
+        return;
+    }
+    
+    // Show confirmation dialog
+    if (!confirm(`Mark €${amount.toFixed(2)} as paid to ${payeeName}?`)) {
+        return;
+    }
+    
+    // Disable button and show loading state
+    button.disabled = true;
+    const originalText = button.innerHTML;
+    button.innerHTML = '⏳ Recording...';
+    
+    try {
+        const response = await fetch('/api/quick-settle', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                group_id: JSON.parse(document.getElementById('group-data').textContent).id,
+                payee_id: parseInt(payeeId),
+                amount: amount
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Show success message
+            showNotification(`Partial payment of €${amount.toFixed(2)} to ${payeeName} recorded!`, 'success');
+            
+            // Refresh the page to update balances
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            throw new Error(data.error || 'Failed to record payment');
+        }
+    } catch (error) {
+        // Restore button state
+        button.disabled = false;
+        button.innerHTML = originalText;
+        
+        showNotification(`Error: ${error.message}`, 'error');
+    }
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <span class="notification-icon">${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span>
+            <span class="notification-message">${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 3000);
+}
 
 function renderBalancesChart() {
     const chartContainer = document.getElementById('balancesChart');

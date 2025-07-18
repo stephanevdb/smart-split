@@ -11,10 +11,27 @@ import uuid
 from datetime import datetime
 from collections import defaultdict
 import json
+from werkzeug.utils import secure_filename
+import google.generativeai as genai
+from dotenv import load_dotenv
+import qrcode
+import qrcode.image.svg
+from io import BytesIO
+import base64
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
 app.config['DATABASE'] = os.environ.get('DATABASE', 'splitwise.db')
+app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+app.config['MAX_CONTENT_LENGTH'] = 7 * 1024 * 1024  # 7MB max file size
+
+# Configure Gemini AI
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -74,7 +91,7 @@ class User(UserMixin):
         try:
             conn.execute(
                 'INSERT INTO users (username, email, password_hash, created_at) VALUES (?, ?, ?, ?)',
-                (username, email, password_hash, datetime.now())
+                (username, email, password_hash, datetime.now().isoformat())
             )
             conn.commit()
             conn.close()
@@ -205,6 +222,7 @@ def init_db():
             payee_id INTEGER NOT NULL,
             amount REAL NOT NULL,
             created_at TIMESTAMP NOT NULL,
+            description TEXT,
             FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
             FOREIGN KEY (payer_id) REFERENCES users (id),
             FOREIGN KEY (payee_id) REFERENCES users (id)
@@ -219,6 +237,9 @@ def init_db():
     
     # Migrate users table to add bank details columns
     migrate_users_table()
+    
+    # Migrate settlements table to add description column
+    migrate_settlements_table()
 
 # Helper functions
 def get_user_groups(user_id):
@@ -350,7 +371,7 @@ def add_user_to_group(user_id, group_id):
         conn.execute('''
             INSERT INTO group_members (group_id, user_id, joined_at)
             VALUES (?, ?, ?)
-        ''', (group_id, user_id, datetime.now()))
+        ''', (group_id, user_id, datetime.now().isoformat()))
         conn.commit()
         conn.close()
         return True
@@ -427,6 +448,160 @@ def migrate_users_table():
         conn.rollback()
     finally:
         conn.close()
+
+def migrate_settlements_table():
+    """Add description column to settlements table if it doesn't exist"""
+    conn = get_db_connection()
+    
+    try:
+        # Check if description column exists
+        cursor = conn.execute("PRAGMA table_info(settlements)")
+        columns = [row[1] for row in cursor.fetchall()]
+        
+        if 'description' not in columns:
+            conn.execute('ALTER TABLE settlements ADD COLUMN description TEXT')
+            conn.commit()
+            print("Added description column to settlements table")
+            
+    except Exception as e:
+        print(f"Settlements table migration error: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+def allowed_file(filename):
+    """Check if file extension is allowed"""
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def ensure_upload_folder():
+    """Ensure upload folder exists"""
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+def generate_epc_qr_code(amount, recipient_name, recipient_iban, recipient_bic=None, reference=None):
+    """Generate EPC QR code for SEPA payments"""
+    try:
+        # EPC QR code format according to European Payments Council guidelines
+        epc_data = [
+            "BCD",  # Service Tag
+            "002",  # Version
+            "1",    # Character set (UTF-8)
+            "SCT",  # Identification (SEPA Credit Transfer)
+            recipient_bic or "",  # BIC of the Beneficiary Bank
+            recipient_name,  # Name of the Beneficiary
+            recipient_iban,  # Account number (IBAN)
+            f"EUR{amount:.2f}",  # Amount in EUR
+            "",     # Purpose (empty)
+            reference or "",  # Structured Reference
+            ""      # Unstructured Remittance Information
+        ]
+        
+        # Join with newlines as per EPC specification
+        epc_string = '\n'.join(epc_data)
+        
+        # Generate QR code
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=6,
+            border=4,
+        )
+        qr.add_data(epc_string)
+        qr.make(fit=True)
+        
+        # Create image
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Convert to base64 for embedding in HTML
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        img_str = base64.b64encode(buffer.getvalue()).decode()
+        
+        return f"data:image/png;base64,{img_str}"
+        
+    except Exception as e:
+        print(f"Error generating EPC QR code: {e}")
+        return None
+
+def analyze_receipt_with_gemini(file_path):
+    """Analyze receipt using Gemini AI and extract individual items"""
+    if not GEMINI_API_KEY:
+        return None
+    
+    try:
+        # Upload file to Gemini
+        file = genai.upload_file(file_path)
+        
+        # Create the model
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # Analyze the receipt
+        prompt = """
+        Analyze this receipt image and extract ALL individual items as separate entries.
+        If an item has quantity > 1, create separate entries for each individual item.
+        
+        Return a JSON object with this structure:
+        {
+            "store_name": "Name of the store/restaurant",
+            "total_amount": 0.00,
+            "currency": "EUR",
+            "items": [
+                {
+                    "name": "Item name",
+                    "price": 0.00
+                }
+            ]
+        }
+        
+        CRITICAL RULES:
+        - If receipt shows "5 Tiramisu €42.50", create 5 separate entries:
+          * Each entry: {"name": "Tiramisu", "price": 8.50}
+          * Calculate unit price: 42.50 ÷ 5 = 8.50 per item
+        - If receipt shows "2 Coke €6.00", create 2 separate entries:
+          * Each entry: {"name": "Coke", "price": 3.00}
+        - Each person should be able to select individual items
+        - "price" field should always be the unit price (per single item)
+        - Expand all quantities into individual item entries
+        - Include ALL items from the receipt as separate entries
+        - Return valid JSON only, no other text
+        """
+        
+        response = model.generate_content([file, prompt])
+        
+        # Parse JSON response
+        response_text = response.text.strip()
+        # Remove markdown code blocks if present
+        if response_text.startswith('```json'):
+            response_text = response_text[7:-3]
+        elif response_text.startswith('```'):
+            response_text = response_text[3:-3]
+        
+        parsed_result = json.loads(response_text)
+        
+        # Validate and fix the parsed result
+        if 'items' in parsed_result:
+            for item in parsed_result['items']:
+                # Ensure required fields exist and are valid
+                if 'name' not in item or not item['name']:
+                    item['name'] = 'Unknown Item'
+                if 'price' not in item:
+                    item['price'] = 0.0
+                
+                # Ensure price is a valid number
+                try:
+                    item['price'] = float(item['price'])
+                except (ValueError, TypeError):
+                    item['price'] = 0.0
+                
+                # Ensure price is positive
+                if item['price'] < 0:
+                    item['price'] = 0.0
+        
+        return parsed_result
+        
+    except Exception as e:
+        print(f"Error analyzing receipt: {e}")
+        return None
 
 # Routes
 @app.route('/')
@@ -527,7 +702,7 @@ def create_group():
         cursor.execute('''
             INSERT INTO groups (name, description, created_by, invite_code, created_at)
             VALUES (?, ?, ?, ?, ?)
-        ''', (form.name.data, form.description.data, current_user.id, invite_code, datetime.now()))
+        ''', (form.name.data, form.description.data, current_user.id, invite_code, datetime.now().isoformat()))
         
         group_id = cursor.lastrowid
         
@@ -535,7 +710,7 @@ def create_group():
         cursor.execute('''
             INSERT INTO group_members (group_id, user_id, joined_at)
             VALUES (?, ?, ?)
-        ''', (group_id, current_user.id, datetime.now()))
+        ''', (group_id, current_user.id, datetime.now().isoformat()))
         
         conn.commit()
         conn.close()
@@ -649,7 +824,7 @@ def add_expense(group_id):
             INSERT INTO expenses (group_id, description, amount, paid_by, created_by, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
         ''', (group_id, form.description.data, form.amount.data, 
-              form.paid_by.data, current_user.id, datetime.now()))
+              form.paid_by.data, current_user.id, datetime.now().isoformat()))
         
         expense_id = cursor.lastrowid
         
@@ -702,11 +877,476 @@ def scan_receipt(group_id):
     conn.close()
     
     if request.method == 'POST':
-        # Handle file upload here (analysis logic will come later)
-        flash('Receipt analysis feature coming soon! Redirecting to manual entry...', 'info')
-        return redirect(url_for('add_expense', group_id=group_id))
+        ensure_upload_folder()
+        
+        # Check if file was uploaded
+        if 'receipt_file' not in request.files:
+            flash('No file selected', 'error')
+            return render_template('groups/scan_receipt.html', group=group)
+        
+        file = request.files['receipt_file']
+        
+        # Check if file was actually selected
+        if file.filename == '':
+            flash('No file selected', 'error')
+            return render_template('groups/scan_receipt.html', group=group)
+        
+        # Validate file type and save
+        if file and allowed_file(file.filename):
+            # Create secure filename with timestamp and user ID
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            original_filename = secure_filename(file.filename)
+            filename = f"receipt_{current_user.id}_{group_id}_{timestamp}_{original_filename}"
+            
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            
+            # Analyze receipt with Gemini AI
+            receipt_analysis = analyze_receipt_with_gemini(file_path)
+            
+            if receipt_analysis:
+                # Store analysis in session for item selection
+                session['receipt_analysis'] = receipt_analysis
+                session['receipt_filename'] = filename
+                return redirect(url_for('select_receipt_items', group_id=group_id))
+            else:
+                if not GEMINI_API_KEY:
+                    flash('Gemini AI not configured. Please set GEMINI_API_KEY environment variable.', 'warning')
+                else:
+                    flash('Could not analyze receipt. Please add items manually.', 'warning')
+                return redirect(url_for('add_expense', group_id=group_id))
+        else:
+            flash('Invalid file type. Please upload an image file (PNG, JPG, JPEG, GIF, BMP, WebP)', 'error')
     
     return render_template('groups/scan_receipt.html', group=group)
+
+@app.route('/groups/<int:group_id>/select_items', methods=['GET', 'POST'])
+@login_required
+def select_receipt_items(group_id):
+    conn = get_db_connection()
+    
+    # Check if user is member of group
+    membership = conn.execute('''
+        SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?
+    ''', (group_id, current_user.id)).fetchone()
+    
+    if not membership:
+        flash('You are not a member of this group.', 'error')
+        return redirect(url_for('groups'))
+    
+    # Get group info and members
+    group = conn.execute('SELECT * FROM groups WHERE id = ?', (group_id,)).fetchone()
+    members_rows = conn.execute('''
+        SELECT u.* FROM users u 
+        JOIN group_members gm ON u.id = gm.user_id 
+        WHERE gm.group_id = ?
+    ''', (group_id,)).fetchall()
+    
+    # Convert SQLite Row objects to dictionaries for JSON serialization
+    members = [dict(member) for member in members_rows]
+    
+    # Check if we have receipt analysis in session
+    receipt_analysis = session.get('receipt_analysis')
+    if not receipt_analysis:
+        flash('No receipt analysis found. Please upload a receipt again.', 'error')
+        return redirect(url_for('scan_receipt', group_id=group_id))
+    
+    if request.method == 'POST':
+        # Get who paid the bill
+        bill_payer_id = request.form.get('bill_payer')
+        if not bill_payer_id:
+            flash('Please select who paid the bill.', 'error')
+            conn.close()
+            return render_template('groups/select_receipt_items.html', 
+                                 group=group, members=members, 
+                                 receipt_analysis=receipt_analysis)
+        
+        try:
+            bill_payer_id = int(bill_payer_id)
+        except (ValueError, TypeError):
+            flash('Invalid bill payer selection.', 'error')
+            conn.close()
+            return render_template('groups/select_receipt_items.html', 
+                                 group=group, members=members, 
+                                 receipt_analysis=receipt_analysis)
+        
+        # Get confirmed payments
+        confirmed_payments_data = request.form.get('confirmed_payments', '[]')
+        try:
+            confirmed_payments = json.loads(confirmed_payments_data) if confirmed_payments_data else []
+        except json.JSONDecodeError:
+            confirmed_payments = []
+        
+        # Process item selections
+        selected_items = []
+        total_amount = 0
+        
+        for i, item in enumerate(receipt_analysis['items']):
+            # Check if this item is in split mode
+            is_split_mode = f'item_{i}_split' in request.form
+            
+            selected_by = []
+            
+            if is_split_mode:
+                # Split mode - use checkboxes
+                checkbox_users = request.form.getlist(f'item_{i}_users')
+                if checkbox_users:
+                    selected_by = [int(user_id) for user_id in checkbox_users]
+            else:
+                # Single user mode - use dropdown
+                dropdown_user = request.form.get(f'item_{i}_user')
+                if dropdown_user:
+                    selected_by = [int(dropdown_user)]
+            
+            if selected_by:
+                # Calculate individual share for this single item
+                try:
+                    price = float(item.get('price', 0))
+                    
+                    # Calculate individual share based on item price
+                    individual_share = round(price / len(selected_by), 2)
+                    
+                    selected_items.append({
+                        'name': item['name'],
+                        'price': price,
+                        'selected_by': selected_by,
+                        'individual_share': individual_share,
+                        'is_split': is_split_mode
+                    })
+                    total_amount += price
+                except (ValueError, TypeError, ZeroDivisionError) as e:
+                    flash(f'Error processing item {item.get("name", "Unknown")}: {str(e)}', 'error')
+                    conn.close()
+                    return render_template('groups/select_receipt_items.html', 
+                                         group=group, members=members, 
+                                         receipt_analysis=receipt_analysis)
+        
+        if not selected_items:
+            flash('Please select at least one item and assign it to users.', 'error')
+            conn.close()
+            return render_template('groups/select_receipt_items.html', 
+                                 group=group, members=members, 
+                                 receipt_analysis=receipt_analysis)
+        
+        # Parse confirmed payments to get user names and amounts
+        confirmed_user_payments = {}
+        for payment_key in confirmed_payments:
+            if '_' in payment_key:
+                parts = payment_key.rsplit('_', 1)  # Split from the right to handle names with underscores
+                if len(parts) == 2:
+                    user_name, amount_str = parts
+                    try:
+                        amount = float(amount_str)
+                        confirmed_user_payments[user_name] = amount
+                    except ValueError:
+                        continue
+        
+        # Get user IDs for confirmed payments
+        confirmed_user_ids = set()
+        for member in members:
+            if member['username'] in confirmed_user_payments:
+                confirmed_user_ids.add(member['id'])
+        
+        # Filter out confirmed payments from selected items
+        filtered_selected_items = []
+        actual_total_amount = 0
+        
+        for item in selected_items:
+            # Remove confirmed users from this item
+            remaining_users = [user_id for user_id in item['selected_by'] if user_id not in confirmed_user_ids]
+            
+            if remaining_users:
+                # Recalculate individual share for remaining users
+                individual_share = item['price'] / len(remaining_users)
+                filtered_selected_items.append({
+                    'name': item['name'],
+                    'price': item['price'],
+                    'selected_by': remaining_users,
+                    'individual_share': individual_share,
+                    'is_split': item['is_split']
+                })
+                actual_total_amount += item['price']
+        
+        # Only create expense if there are remaining unpaid items
+        if not filtered_selected_items:
+            # All payments were confirmed, no expense to create
+            # Clear session data
+            session.pop('receipt_analysis', None)
+            session.pop('receipt_filename', None)
+            
+            confirmed_count = len(confirmed_user_payments)
+            flash(f'All {confirmed_count} payment(s) have been confirmed! No expense added to the group.', 'success')
+            return redirect(url_for('group_detail', group_id=group_id))
+
+        # Create single expense for the remaining unpaid amount
+        try:
+            cursor = conn.cursor()
+            
+            # Create the main expense
+            store_name = receipt_analysis.get('store_name', 'Receipt')
+            cursor.execute('''
+                INSERT INTO expenses (group_id, description, amount, paid_by, created_by, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (group_id, f"Receipt from {store_name}", actual_total_amount, bill_payer_id, current_user.id, datetime.now().isoformat()))
+            
+            expense_id = cursor.lastrowid
+            
+            # Aggregate expense shares per user (to avoid duplicate user_id entries)
+            user_shares = {}
+            for item in filtered_selected_items:
+                for user_id in item['selected_by']:
+                    if user_id not in user_shares:
+                        user_shares[user_id] = 0
+                    user_shares[user_id] += item['individual_share']
+            
+            # Create expense shares for each user
+            for user_id, total_share in user_shares.items():
+                cursor.execute('''
+                    INSERT INTO expense_shares (expense_id, user_id, amount)
+                    VALUES (?, ?, ?)
+                ''', (expense_id, user_id, total_share))
+            
+            conn.commit()
+            conn.close()
+            
+            # Clear session data
+            session.pop('receipt_analysis', None)
+            session.pop('receipt_filename', None)
+            
+            # Get payer name for flash message
+            payer_name = next((m['username'] for m in members if m['id'] == bill_payer_id), 'Someone')
+            
+            # Create success message based on confirmed payments
+            if confirmed_user_payments:
+                confirmed_total = sum(confirmed_user_payments.values())
+                flash(f'Receipt processed! {len(confirmed_user_payments)} payment(s) confirmed (€{confirmed_total:.2f}). Expense added for remaining €{actual_total_amount:.2f} paid by {payer_name}.', 'success')
+            else:
+                flash(f'Successfully added receipt expenses! {payer_name} paid €{actual_total_amount:.2f} total.', 'success')
+            
+            return redirect(url_for('group_detail', group_id=group_id))
+            
+        except Exception as e:
+            conn.rollback()
+            conn.close()
+            flash(f'Error adding expenses: {str(e)}', 'error')
+            return render_template('groups/select_receipt_items.html', 
+                                 group=group, members=members, 
+                                 receipt_analysis=receipt_analysis)
+    
+    # Get bill payer info from session if available
+    bill_payer_info = None
+    if 'bill_payer_id' in session:
+        bill_payer_info = next((m for m in members if m['id'] == session['bill_payer_id']), None)
+    
+    conn.close()
+    return render_template('groups/select_receipt_items.html', 
+                         group=group, members=members, 
+                         receipt_analysis=receipt_analysis,
+                         bill_payer_info=bill_payer_info)
+
+@app.route('/groups/<int:group_id>/admin', methods=['GET', 'POST'])
+@login_required
+def group_admin(group_id):
+    """Admin dashboard for group creators to manage balances"""
+    conn = get_db_connection()
+    
+    # Check if user is member of group
+    membership = conn.execute('''
+        SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?
+    ''', (group_id, current_user.id)).fetchone()
+    
+    if not membership:
+        flash('You are not a member of this group.', 'error')
+        return redirect(url_for('groups'))
+    
+    # Get group info and check if user is creator
+    group = conn.execute('SELECT * FROM groups WHERE id = ?', (group_id,)).fetchone()
+    
+    if not group:
+        flash('Group not found.', 'error')
+        return redirect(url_for('groups'))
+    
+    if group['created_by'] != current_user.id:
+        flash('Only the group creator can access the admin dashboard.', 'error')
+        return redirect(url_for('group_detail', group_id=group_id))
+    
+    # Get members
+    members = get_group_members(group_id)
+    
+    if request.method == 'POST':
+        # Handle manual balance adjustment
+        try:
+            payer_id = int(request.form.get('payer_id'))
+            payee_id = int(request.form.get('payee_id'))
+            amount = float(request.form.get('amount'))
+            description = request.form.get('description', '').strip()
+            
+            if amount <= 0:
+                flash('Amount must be positive.', 'error')
+            elif payer_id == payee_id:
+                flash('Payer and payee cannot be the same person.', 'error')
+            else:
+                # Validate that both users are group members
+                payer_member = any(m['id'] == payer_id for m in members)
+                payee_member = any(m['id'] == payee_id for m in members)
+                
+                if not payer_member or not payee_member:
+                    flash('Invalid payer or payee selection.', 'error')
+                else:
+                    # Create settlement entry
+                    cursor = conn.cursor()
+                    settlement_desc = description or 'Manual adjustment by admin'
+                    
+                    cursor.execute('''
+                        INSERT INTO settlements (group_id, payer_id, payee_id, amount, created_at, description)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ''', (group_id, payer_id, payee_id, amount, datetime.now().isoformat(), settlement_desc))
+                    
+                    conn.commit()
+                    
+                    payer_name = next((m['username'] for m in members if m['id'] == payer_id), 'Unknown')
+                    payee_name = next((m['username'] for m in members if m['id'] == payee_id), 'Unknown')
+                    
+                    flash(f'Balance adjusted: {payer_name} paid €{amount:.2f} to {payee_name}', 'success')
+                    
+        except (ValueError, TypeError) as e:
+            flash('Invalid input. Please check your entries.', 'error')
+    
+    # Calculate current balances
+    balances = calculate_balances(group_id)
+    
+    # Get recent settlements for this group
+    recent_settlements = conn.execute('''
+        SELECT s.*, 
+               up.username as payer_name, 
+               ue.username as payee_name
+        FROM settlements s
+        JOIN users up ON s.payer_id = up.id
+        JOIN users ue ON s.payee_id = ue.id
+        WHERE s.group_id = ?
+        ORDER BY s.created_at DESC
+        LIMIT 20
+    ''', (group_id,)).fetchall()
+    
+    conn.close()
+    
+    return render_template('groups/admin.html', 
+                         group=group, 
+                         members=members, 
+                         balances=balances,
+                         recent_settlements=recent_settlements)
+
+@app.route('/api/quick-settle', methods=['POST'])
+@login_required
+def quick_settle():
+    """Quick settlement API - mark a debt as paid with one click"""
+    try:
+        data = request.get_json()
+        group_id = data.get('group_id')
+        payee_id = data.get('payee_id')
+        amount = data.get('amount')
+        
+        if not all([group_id, payee_id, amount]):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        if amount <= 0:
+            return jsonify({'error': 'Amount must be positive'}), 400
+        
+        conn = get_db_connection()
+        
+        # Check if user is member of group
+        membership = conn.execute('''
+            SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?
+        ''', (group_id, current_user.id)).fetchone()
+        
+        if not membership:
+            conn.close()
+            return jsonify({'error': 'Not authorized'}), 403
+        
+        # Check if payee is also a member
+        payee_membership = conn.execute('''
+            SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?
+        ''', (group_id, payee_id)).fetchone()
+        
+        if not payee_membership:
+            conn.close()
+            return jsonify({'error': 'Payee is not a member of this group'}), 400
+        
+        # Get payee name for response
+        payee = conn.execute('''
+            SELECT username FROM users WHERE id = ?
+        ''', (payee_id,)).fetchone()
+        
+        if not payee:
+            conn.close()
+            return jsonify({'error': 'Payee not found'}), 404
+        
+        # Record the settlement
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO settlements (group_id, payer_id, payee_id, amount, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (group_id, current_user.id, payee_id, amount, datetime.now().isoformat()))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Payment of €{amount:.2f} to {payee["username"]} recorded successfully',
+            'amount': amount,
+            'payee': payee['username']
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/generate_payment_qr')
+@login_required
+def generate_payment_qr():
+    """Generate EPC QR code for payment"""
+    try:
+        amount = float(request.args.get('amount', 0))
+        payer_id = int(request.args.get('payer_id'))
+        reference = request.args.get('reference', f'Payment from {current_user.username}')
+        
+        if amount <= 0:
+            return jsonify({'error': 'Invalid amount'}), 400
+        
+        # Get payer's bank details
+        conn = get_db_connection()
+        payer = conn.execute('''
+            SELECT full_name, iban, bic FROM users WHERE id = ?
+        ''', (payer_id,)).fetchone()
+        conn.close()
+        
+        if not payer:
+            return jsonify({'error': 'Payer not found'}), 404
+        
+        if not payer['iban']:
+            return jsonify({'error': 'Payer has no bank details configured'}), 400
+        
+        # Generate QR code
+        qr_data = generate_epc_qr_code(
+            amount=amount,
+            recipient_name=payer['full_name'] or 'Unknown',
+            recipient_iban=payer['iban'],
+            recipient_bic=payer['bic'],
+            reference=reference
+        )
+        
+        if not qr_data:
+            return jsonify({'error': 'Failed to generate QR code'}), 500
+        
+        return jsonify({
+            'qr_code': qr_data,
+            'amount': amount,
+            'recipient': payer['full_name'] or 'Unknown',
+            'iban': payer['iban']
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/groups/<int:group_id>/settle/<int:payee_id>', methods=['GET', 'POST'])
 @login_required
@@ -739,7 +1379,7 @@ def settle_debt(group_id, payee_id):
         cursor.execute('''
             INSERT INTO settlements (group_id, payer_id, payee_id, amount, created_at)
             VALUES (?, ?, ?, ?, ?)
-        ''', (group_id, current_user.id, payee_id, form.amount.data, datetime.now()))
+        ''', (group_id, current_user.id, payee_id, form.amount.data, datetime.now().isoformat()))
         
         conn.commit()
         conn.close()
@@ -979,4 +1619,5 @@ def api_dashboard_summary():
 
 if __name__ == '__main__':
     init_db()
+    ensure_upload_folder()
     app.run(debug=True, host='0.0.0.0', port=3000)

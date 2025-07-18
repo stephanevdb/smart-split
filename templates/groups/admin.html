@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - {{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="admin-header">
+        <div class="admin-title">
+            <h2>🛠️ Admin Dashboard</h2>
+            <p>Manage balances for <strong>{{ group.name }}</strong></p>
+        </div>
+        <div class="admin-actions">
+            <a href="{{ url_for('group_detail', group_id=group.id) }}" class="btn btn-secondary">
+                Back to Group
+            </a>
+        </div>
+    </div>
+
+    <!-- Current Balances -->
+    <div class="admin-section">
+        <h3>📊 Current Balances</h3>
+        <div class="balances-grid">
+            {% for member in members %}
+                {% set balance = balances.get(member.id, 0) %}
+                <div class="balance-card {% if balance > 0 %}positive{% elif balance < 0 %}negative{% else %}neutral{% endif %}">
+                    <div class="member-info">
+                        <div class="member-avatar">{{ member.username[0].upper() }}</div>
+                        <div class="member-name">{{ member.username }}</div>
+                    </div>
+                    <div class="balance-amount">
+                        {% if balance > 0 %}
+                            <span class="amount positive">+€{{ "%.2f"|format(balance) }}</span>
+                            <small>is owed</small>
+                        {% elif balance < 0 %}
+                            <span class="amount negative">-€{{ "%.2f"|format(-balance) }}</span>
+                            <small>owes</small>
+                        {% else %}
+                            <span class="amount neutral">€0.00</span>
+                            <small>settled</small>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Manual Balance Adjustment -->
+    <div class="admin-section">
+        <h3>⚖️ Manual Balance Adjustment</h3>
+        <div class="adjustment-form-container">
+            <form method="POST" class="adjustment-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="payer_id" class="form-label">Who Paid</label>
+                        <select name="payer_id" id="payer_id" class="form-select" required>
+                            <option value="">Select who made the payment...</option>
+                            {% for member in members %}
+                                <option value="{{ member.id }}">{{ member.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="payee_id" class="form-label">Who Received</label>
+                        <select name="payee_id" id="payee_id" class="form-select" required>
+                            <option value="">Select who received the payment...</option>
+                            {% for member in members %}
+                                <option value="{{ member.id }}">{{ member.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="amount" class="form-label">Amount</label>
+                        <div class="amount-input-container">
+                            <span class="currency-symbol">€</span>
+                            <input type="number" name="amount" id="amount" class="form-input amount-input" 
+                                   placeholder="0.00" step="0.01" min="0.01" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="description" class="form-label">Description (Optional)</label>
+                        <input type="text" name="description" id="description" class="form-input" 
+                               placeholder="e.g., Cash payment, Bank transfer, Correction...">
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <span class="btn-icon">💾</span>
+                        Record Payment
+                    </button>
+                </div>
+            </form>
+            
+            <div class="adjustment-info">
+                <h4>💡 How it works</h4>
+                <p>Recording a payment will adjust the balances between two group members. This is useful for:</p>
+                <ul>
+                    <li>Cash payments made outside the app</li>
+                    <li>Bank transfers or other external payments</li>
+                    <li>Corrections for mistakes or missed transactions</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Settlements -->
+    <div class="admin-section">
+        <h3>📋 Recent Settlements</h3>
+        {% if recent_settlements %}
+            <div class="settlements-table">
+                <div class="settlements-header">
+                    <div class="col-date">Date</div>
+                    <div class="col-payer">Payer</div>
+                    <div class="col-payee">Payee</div>
+                    <div class="col-amount">Amount</div>
+                    <div class="col-description">Description</div>
+                </div>
+                {% for settlement in recent_settlements %}
+                    <div class="settlement-row">
+                        <div class="col-date">
+                            {{ settlement.created_at.strftime('%m/%d/%Y') if settlement.created_at.strftime else settlement.created_at }}
+                        </div>
+                        <div class="col-payer">{{ settlement.payer_name }}</div>
+                        <div class="col-payee">{{ settlement.payee_name }}</div>
+                        <div class="col-amount">€{{ "%.2f"|format(settlement.amount) }}</div>
+                        <div class="col-description">
+                            {{ settlement.description or 'Regular settlement' }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-settlements">
+                <div class="empty-icon">📋</div>
+                <h4>No settlements yet</h4>
+                <p>Settlements and balance adjustments will appear here.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const payerSelect = document.getElementById('payer_id');
+    const payeeSelect = document.getElementById('payee_id');
+    
+    // Prevent selecting the same person as both payer and payee
+    payerSelect.addEventListener('change', function() {
+        const selectedPayerId = this.value;
+        const payeeOptions = payeeSelect.querySelectorAll('option');
+        
+        payeeOptions.forEach(option => {
+            if (option.value === selectedPayerId && option.value !== '') {
+                option.disabled = true;
+            } else {
+                option.disabled = false;
+            }
+        });
+        
+        // Clear payee selection if it's the same as payer
+        if (payeeSelect.value === selectedPayerId) {
+            payeeSelect.value = '';
+        }
+    });
+    
+    payeeSelect.addEventListener('change', function() {
+        const selectedPayeeId = this.value;
+        const payerOptions = payerSelect.querySelectorAll('option');
+        
+        payerOptions.forEach(option => {
+            if (option.value === selectedPayeeId && option.value !== '') {
+                option.disabled = true;
+            } else {
+                option.disabled = false;
+            }
+        });
+        
+        // Clear payer selection if it's the same as payee
+        if (payerSelect.value === selectedPayeeId) {
+            payerSelect.value = '';
+        }
+    });
+});
+</script>
+{% endblock %} 

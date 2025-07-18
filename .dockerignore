@@ -1,10 +1,7 @@
 # Git
 .git
 .gitignore
-
-# Documentation
 README.md
-*.md
 
 # Python
 __pycache__
@@ -18,21 +15,20 @@ pip-delete-this-directory.txt
 .tox
 .coverage
 .coverage.*
-.pytest_cache
-nosetests.xml
 .cache
+nosetests.xml
 coverage.xml
 *.cover
 *.log
-.flake8
+.hypothesis
 
 # Virtual environments
 venv/
-env/
 ENV/
+env/
 .venv/
 
-# IDE
+# IDEs
 .vscode/
 .idea/
 *.swp
@@ -48,19 +44,27 @@ ENV/
 ehthumbs.db
 Thumbs.db
 
+# Local environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
 # Database files (will be mounted as volume)
 *.db
 *.sqlite
 *.sqlite3
 
+# Upload files (will be mounted as volume)
+uploads/*
+!uploads/.gitkeep
+
+# Temporary files
+*.tmp
+*.temp
+
 # Docker
 Dockerfile*
 docker-compose*
-.dockerignore
-
-# Local data directory
-data/
-
-# Logs
-logs/
-*.log 
+.dockerignore 

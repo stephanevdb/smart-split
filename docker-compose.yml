@@ -1,9 +1,42 @@
+version: '3.8'
+
 services:
-  web: 
+  smart-split:
     build: .
     ports:
-      - "5066:5066" 
+      - "3000:3000"
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
+      - DATABASE=/app/data/splitwise.db
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     volumes:
-      - ./smart-split:/app
-    # environment:
-    #   - FLASK_ENV=development # Example: Set Flask environment variable
+      # Persistent data storage
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Development override
+  smart-split-dev:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - FLASK_ENV=development
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
+      - DATABASE=/app/data/splitwise.db
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    volumes:
+      # Mount source code for development
+      - .:/app
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+    profiles:
+      - development 
