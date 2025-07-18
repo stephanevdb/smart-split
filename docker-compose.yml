@@ -4,7 +4,7 @@ services:
   smart-split:
     build: .
     ports:
-      - "3000:3000"
+      - "3077:3000"
     environment:
       - FLASK_ENV=production
       - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
