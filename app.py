@@ -714,17 +714,32 @@ def mark_token_as_used(token):
 def send_password_reset_email(user_email, reset_token):
     """Send password reset email with reset code"""
     try:
+        # Get sender from config or use a default
+        sender = app.config.get('MAIL_DEFAULT_SENDER') or app.config.get('MAIL_USERNAME')
+        if not sender:
+            print("Error: No email sender configured. Please set MAIL_DEFAULT_SENDER or MAIL_USERNAME.")
+            return False
+        
+        # Debug logging
+        print(f"Sending password reset email to: {user_email}")
+        print(f"Using sender: {sender}")
+        print(f"SMTP server: {app.config.get('MAIL_SERVER')}:{app.config.get('MAIL_PORT')}")
+        
         msg = Message(
             subject='Smart Split - Password Reset',
+            sender=sender,
             recipients=[user_email],
             html=render_template('auth/password_reset_email.html', 
                                reset_token=reset_token,
                                app_name='Smart Split')
         )
         mail.send(msg)
+        print("Email sent successfully!")
         return True
     except Exception as e:
         print(f"Error sending email: {e}")
+        print(f"Email config - Server: {app.config.get('MAIL_SERVER')}, Port: {app.config.get('MAIL_PORT')}")
+        print(f"Email config - Username: {app.config.get('MAIL_USERNAME')}, TLS: {app.config.get('MAIL_USE_TLS')}")
         return False
 
 def cleanup_expired_tokens():
@@ -1829,6 +1844,32 @@ def api_dashboard_summary():
 def privacy_policy():
     """Privacy policy page"""
     return render_template('privacy_policy.html')
+
+@app.route('/debug/email-config')
+def debug_email_config():
+    """Debug route to check email configuration (development only)"""
+    if not app.debug and os.environ.get('FLASK_ENV') != 'development':
+        return "Debug routes only available in development mode", 403
+    
+    config_info = {
+        'MAIL_SERVER': app.config.get('MAIL_SERVER'),
+        'MAIL_PORT': app.config.get('MAIL_PORT'),
+        'MAIL_USE_TLS': app.config.get('MAIL_USE_TLS'),
+        'MAIL_USE_SSL': app.config.get('MAIL_USE_SSL'),
+        'MAIL_USERNAME': app.config.get('MAIL_USERNAME'),
+        'MAIL_DEFAULT_SENDER': app.config.get('MAIL_DEFAULT_SENDER'),
+        'MAIL_PASSWORD_SET': bool(app.config.get('MAIL_PASSWORD')),
+    }
+    
+    return jsonify({
+        'email_config': config_info,
+        'sender_available': bool(app.config.get('MAIL_DEFAULT_SENDER') or app.config.get('MAIL_USERNAME')),
+        'ready_to_send': all([
+            config_info['MAIL_SERVER'],
+            config_info['MAIL_USERNAME'],
+            config_info['MAIL_PASSWORD_SET']
+        ])
+    })
 
 if __name__ == '__main__':
     init_db()

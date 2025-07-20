@@ -156,6 +156,16 @@ The reset email should include:
 - **Check network**: Ensure your server can access the SMTP server
 - **Check spam**: Look in the spam/junk folder
 
+#### "The message does not specify a sender and a default sender has not been configured"
+- **Set MAIL_DEFAULT_SENDER**: Ensure this environment variable is set
+- **Alternative**: Set MAIL_USERNAME (will be used as fallback sender)
+- **Docker users**: Make sure environment variables are properly passed to the container
+- **Example fix**: 
+  ```env
+  MAIL_DEFAULT_SENDER=noreply@yourdomain.com
+  MAIL_USERNAME=your-email@gmail.com
+  ```
+
 #### "Authentication failed"
 - **Gmail**: Ensure 2FA is enabled and you're using an app password
 - **Outlook**: May need to enable "Less secure app access"
@@ -171,6 +181,33 @@ Add this to your environment for detailed email debugging:
 ```env
 FLASK_ENV=development
 MAIL_DEBUG=True
+```
+
+### Check Email Configuration
+Visit the debug endpoint to verify your email configuration:
+```
+http://localhost:3000/debug/email-config
+```
+
+This endpoint (available only in development mode) will show:
+- ✅ Current email configuration settings
+- ✅ Whether a sender is properly configured
+- ✅ Whether the setup is ready to send emails
+
+Example response:
+```json
+{
+  "email_config": {
+    "MAIL_SERVER": "smtp.gmail.com",
+    "MAIL_PORT": 587,
+    "MAIL_USE_TLS": true,
+    "MAIL_USERNAME": "your-email@gmail.com",
+    "MAIL_DEFAULT_SENDER": "your-email@gmail.com",
+    "MAIL_PASSWORD_SET": true
+  },
+  "sender_available": true,
+  "ready_to_send": true
+}
 ```
 
 ### Testing Without Email
