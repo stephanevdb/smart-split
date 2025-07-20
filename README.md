@@ -6,6 +6,7 @@ A modern Progressive Web App (PWA) for splitting expenses with friends and group
 
 ### 🔐 User Management
 - Secure user registration and authentication
+- **Password reset with email verification** 📧
 - Personal profiles with bank details (IBAN/BIC)
 - Password hashing with werkzeug security
 
@@ -114,7 +115,17 @@ GEMINI_API_KEY=your-google-gemini-api-key
 
 # Optional - database path (defaults to splitwise.db)
 DATABASE=splitwise.db
+
+# Email configuration for password reset (optional but recommended)
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USE_TLS=True
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-app-password-here
+MAIL_DEFAULT_SENDER=your-email@gmail.com
 ```
+
+> 📧 **Email Setup**: For detailed email configuration instructions, see [EMAIL_SETUP.md](EMAIL_SETUP.md)
 
 ## 🐳 Docker Deployment
 
@@ -163,6 +174,10 @@ The application will be available at:
 
 ### Core Routes
 - `/` - Home page with authentication
+- `/login` - User login
+- `/register` - User registration
+- `/forgot-password` - Request password reset
+- `/reset-password/<token>` - Reset password with email token
 - `/dashboard` - Personal expense overview
 - `/groups` - Group management
 - `/groups/create` - Create new groups

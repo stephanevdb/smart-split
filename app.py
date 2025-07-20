@@ -1,5 +1,6 @@
 from flask import Flask, render_template, jsonify, request, redirect, url_for, flash, session
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_mail import Mail, Message
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, EmailField, FloatField, SelectField, TextAreaField, SelectMultipleField, RadioField, HiddenField
 from wtforms.validators import DataRequired, Email, Length, EqualTo, NumberRange
@@ -8,7 +9,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
 import json
 from werkzeug.utils import secure_filename
@@ -18,6 +19,8 @@ import qrcode
 import qrcode.image.svg
 from io import BytesIO
 import base64
+import secrets
+import string
 
 # Load environment variables from .env file
 load_dotenv()
@@ -28,10 +31,22 @@ app.config['DATABASE'] = os.environ.get('DATABASE', 'splitwise.db')
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 7 * 1024 * 1024  # 7MB max file size
 
+# Email configuration
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', app.config['MAIL_USERNAME'])
+
 # Configure Gemini AI
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
+
+# Initialize Flask-Mail
+mail = Mail(app)
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -116,6 +131,15 @@ class RegistrationForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
     password2 = PasswordField('Repeat Password', validators=[DataRequired(), EqualTo('password')])
     submit = SubmitField('Register')
+
+class PasswordResetRequestForm(FlaskForm):
+    email = EmailField('Email', validators=[DataRequired(), Email()])
+    submit = SubmitField('Send Reset Email')
+
+class PasswordResetForm(FlaskForm):
+    password = PasswordField('New Password', validators=[DataRequired(), Length(min=6)])
+    password2 = PasswordField('Confirm New Password', validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Reset Password')
 
 class GroupForm(FlaskForm):
     name = StringField('Group Name', validators=[DataRequired(), Length(min=1, max=100)])
@@ -226,6 +250,19 @@ def init_db():
             FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
             FOREIGN KEY (payer_id) REFERENCES users (id),
             FOREIGN KEY (payee_id) REFERENCES users (id)
+        )
+    ''')
+    
+    # Password reset tokens table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            token TEXT NOT NULL UNIQUE,
+            expires_at TIMESTAMP NOT NULL,
+            used BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )
     ''')
     
@@ -603,6 +640,105 @@ def analyze_receipt_with_gemini(file_path):
         print(f"Error analyzing receipt: {e}")
         return None
 
+# Password reset helper functions
+def generate_reset_token():
+    """Generate a secure random token for password reset"""
+    return ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(32))
+
+def create_password_reset_token(user_id):
+    """Create a password reset token for a user"""
+    token = generate_reset_token()
+    expires_at = datetime.now() + timedelta(hours=1)  # Token expires in 1 hour
+    
+    conn = get_db_connection()
+    try:
+        # Delete any existing unused tokens for this user
+        conn.execute('''
+            DELETE FROM password_reset_tokens 
+            WHERE user_id = ? AND used = FALSE
+        ''', (user_id,))
+        
+        # Insert new token
+        conn.execute('''
+            INSERT INTO password_reset_tokens (user_id, token, expires_at, created_at)
+            VALUES (?, ?, ?, ?)
+        ''', (user_id, token, expires_at.isoformat(), datetime.now().isoformat()))
+        
+        conn.commit()
+        return token
+    except Exception as e:
+        print(f"Error creating password reset token: {e}")
+        return None
+    finally:
+        conn.close()
+
+def validate_reset_token(token):
+    """Validate a password reset token and return user_id if valid"""
+    conn = get_db_connection()
+    try:
+        result = conn.execute('''
+            SELECT user_id, expires_at, used
+            FROM password_reset_tokens
+            WHERE token = ?
+        ''', (token,)).fetchone()
+        
+        if not result:
+            return None
+        
+        # Check if token is already used
+        if result['used']:
+            return None
+        
+        # Check if token is expired
+        expires_at = datetime.fromisoformat(result['expires_at'])
+        if datetime.now() > expires_at:
+            return None
+        
+        return result['user_id']
+    finally:
+        conn.close()
+
+def mark_token_as_used(token):
+    """Mark a reset token as used"""
+    conn = get_db_connection()
+    try:
+        conn.execute('''
+            UPDATE password_reset_tokens
+            SET used = TRUE
+            WHERE token = ?
+        ''', (token,))
+        conn.commit()
+    finally:
+        conn.close()
+
+def send_password_reset_email(user_email, reset_token):
+    """Send password reset email with reset code"""
+    try:
+        msg = Message(
+            subject='Smart Split - Password Reset',
+            recipients=[user_email],
+            html=render_template('auth/password_reset_email.html', 
+                               reset_token=reset_token,
+                               app_name='Smart Split')
+        )
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
+
+def cleanup_expired_tokens():
+    """Clean up expired password reset tokens"""
+    conn = get_db_connection()
+    try:
+        conn.execute('''
+            DELETE FROM password_reset_tokens
+            WHERE expires_at < ? OR used = TRUE
+        ''', (datetime.now().isoformat(),))
+        conn.commit()
+    finally:
+        conn.close()
+
 # Routes
 @app.route('/')
 def index():
@@ -658,6 +794,78 @@ def logout():
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    form = PasswordResetRequestForm()
+    if form.validate_on_submit():
+        user = User.get_by_email(form.email.data)
+        if user:
+            # Clean up expired tokens first
+            cleanup_expired_tokens()
+            
+            # Generate reset token
+            reset_token = create_password_reset_token(user.id)
+            if reset_token:
+                # Send email with reset code
+                if send_password_reset_email(user.email, reset_token):
+                    flash('If an account with that email exists, you will receive a password reset email shortly.', 'info')
+                else:
+                    flash('Failed to send reset email. Please try again later.', 'error')
+            else:
+                flash('Failed to generate reset token. Please try again.', 'error')
+        else:
+            # Don't reveal if email exists or not for security
+            flash('If an account with that email exists, you will receive a password reset email shortly.', 'info')
+        
+        return redirect(url_for('login'))
+    
+    return render_template('auth/forgot_password.html', form=form)
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    # Validate token
+    user_id = validate_reset_token(token)
+    if not user_id:
+        flash('Invalid or expired reset token. Please request a new password reset.', 'error')
+        return redirect(url_for('forgot_password'))
+    
+    form = PasswordResetForm()
+    if form.validate_on_submit():
+        # Update user password
+        user = User.get(user_id)
+        if user:
+            new_password_hash = generate_password_hash(form.password.data)
+            
+            conn = get_db_connection()
+            try:
+                conn.execute('''
+                    UPDATE users 
+                    SET password_hash = ?
+                    WHERE id = ?
+                ''', (new_password_hash, user_id))
+                conn.commit()
+                
+                # Mark token as used
+                mark_token_as_used(token)
+                
+                flash('Your password has been reset successfully. You can now log in with your new password.', 'success')
+                return redirect(url_for('login'))
+            except Exception as e:
+                flash('Error updating password. Please try again.', 'error')
+                print(f"Error updating password: {e}")
+            finally:
+                conn.close()
+        else:
+            flash('User not found. Please try again.', 'error')
+    
+    return render_template('auth/reset_password.html', form=form, token=token)
 
 @app.route('/dashboard')
 @login_required
