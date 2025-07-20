@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set default paid_by to current user if available
     const paidBySelect = document.getElementById('paid_by');
     if (paidBySelect) {
-        paidBySelect.value = {{ current_user.id }};
+        paidBySelect.value = "{{ current_user.id }}";
     }
     
     // Select all members by default

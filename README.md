@@ -1,271 +1,239 @@
-# Smart Split PWA
+# 💰 Smart Split - Expense Sharing PWA
 
-A simple Progressive Web App (PWA) template built with Flask. This template provides all the essential PWA features including offline functionality, installability, and responsive design.
+A modern Progressive Web App (PWA) for splitting expenses with friends and groups. Track shared costs, scan receipts with AI, and settle up easily.
 
-## Features
+## ✨ Features
 
-- 📱 **Installable**: Can be installed on devices like a native app
-- 🔄 **Offline Support**: Works even when offline using service workers
-- ⚡ **Fast Loading**: Quick loading with efficient caching
-- 📲 **Responsive**: Works great on all devices and screen sizes
-- 🎨 **Modern UI**: Beautiful and modern user interface
-- 🤖 **AI Receipt Analysis**: Automatically extract items from receipt photos using Gemini AI
-- 💰 **Smart Expense Splitting**: Select which group members consumed each item
-- 🔔 **Push Notifications**: Ready for push notification implementation
-- 🔄 **Background Sync**: Prepared for background synchronization
+### 🔐 User Management
+- Secure user registration and authentication
+- Personal profiles with bank details (IBAN/BIC)
+- Password hashing with werkzeug security
 
-## Project Structure
+### 👥 Group Management
+- Create expense groups with custom names and descriptions
+- Invite friends via unique invite codes or QR codes
+- Join groups using invite links
+- Group admin controls
 
-```
-smart-split/
-├── app.py                 # Main Flask application
-├── requirements.txt       # Python dependencies
-├── .env                   # Environment variables (create from .env.example)
-├── .env.example          # Environment variables template
-├── templates/            # HTML templates
-│   ├── base.html         # Base template with PWA features
-│   ├── groups/           # Group-related templates
-│   │   ├── scan_receipt.html      # Receipt upload page
-│   │   └── select_receipt_items.html # AI item selection page
-│   ├── index.html        # Main page
-│   └── offline.html      # Offline fallback page
-├── static/              # Static assets
-│   ├── css/
-│   │   └── style.css    # Main stylesheet
-│   ├── js/
-│   │   └── app.js       # PWA JavaScript functionality
-│   ├── icons/           # PWA icons (various sizes)
-│   ├── manifest.json    # PWA manifest file
-│   └── sw.js           # Service worker
-├── uploads/             # Uploaded receipt images
-└── README.md           # This file
-```
+### 💸 Expense Tracking
+- Add expenses with custom descriptions and amounts
+- Split costs among group members
+- Automatic balance calculations
+- Track who owes what to whom
 
-## Installation & Setup
+### 🤖 AI-Powered Receipt Scanning
+- Upload receipt photos for automatic expense extraction
+- Powered by Google Gemini AI
+- Select specific items from receipts to add as expenses
+- Smart text recognition and amount parsing
 
-### Option 1: Local Installation
+### 📊 Dashboard & Analytics
+- Personal dashboard with expense overview
+- Balance summaries (what you owe vs. what you're owed)
+- Recent activity tracking
+- Group statistics
 
-1. **Clone or download this repository**
+### 📱 Progressive Web App
+- Install on any device like a native app
+- Offline functionality with service worker
+- Responsive design for mobile and desktop
+- Push notification support
 
-2. **Install dependencies:**
+### 🏦 Settlement Features
+- Calculate optimal debt settlements
+- Bank details integration for easy transfers
+- Settlement history tracking
+
+## 🛠️ Technology Stack
+
+- **Backend**: Flask (Python)
+- **Database**: SQLite with connection pooling
+- **Authentication**: Flask-Login with secure sessions
+- **Forms**: WTForms with CSRF protection
+- **AI Integration**: Google Gemini API for receipt scanning
+- **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
+- **PWA**: Service Worker, Web App Manifest
+- **Deployment**: Docker, Gunicorn
+- **QR Codes**: qrcode library for invite generation
+
+## 🚀 Quick Start
+
+### Option 1: Docker (Recommended)
+
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd smart-split
+   ```
+
+2. **Set up environment variables**:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your settings
+   ```
+
+3. **Start with Docker**:
+   ```bash
+   # Production mode
+   ./docker-start.sh
+   
+   # Development mode
+   ./docker-start.sh dev
+   ```
+
+4. **Access the app**: Open http://localhost:3000
+
+### Option 2: Local Development
+
+1. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Set up environment variables (optional for AI features):**
+2. **Set up environment**:
    ```bash
-   # Copy the example environment file
-   cp .env.example .env
-   
-   # Edit .env and add your Gemini API key for receipt analysis
-   # GEMINI_API_KEY=your-actual-api-key-here
+   export SECRET_KEY="your-secret-key"
+   export GEMINI_API_KEY="your-gemini-api-key"  # Optional
    ```
-   Get your API key from: https://aistudio.google.com/app/apikey
 
-4. **Run the application:**
+3. **Run the application**:
    ```bash
    python app.py
    ```
 
-5. **Open your browser and navigate to:**
-   ```
-   http://localhost:3000
-   ```
+## 📋 Environment Variables
 
-### Option 2: Docker Installation
+Create a `.env` file with the following variables:
 
-#### Development with Docker
-1. **Clone the repository**
+```env
+# Required
+SECRET_KEY=your-very-secure-secret-key-here
 
-2. **Run with Docker Compose (Development with hot reloading):**
-   ```bash
-   docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
-   ```
-   This will start the app in development mode with hot reloading for both code and static files.
+# Optional - for AI receipt scanning
+GEMINI_API_KEY=your-google-gemini-api-key
 
-3. **Or run in production mode locally:**
-   ```bash
-   docker-compose up --build
-   ```
-
-4. **Open your browser and navigate to:**
-   ```
-   http://localhost:3066
-   ```
-
-#### Production with Docker
-1. **Run with production configuration:**
-   ```bash
-   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-   ```
-
-2. **Or build and run manually:**
-   ```bash
-   # Build the image
-   docker build -t smart-split .
-   
-   # Run the container
-   docker run -d \
-     --name smart-split-app \
-     -p 3066:3000 \
-     -v $(pwd)/data:/app/data \
-     -e SECRET_KEY=your-production-secret-key \
-     smart-split
-   ```
-
-#### Docker Commands
-- **Stop containers:** `docker-compose down`
-- **View logs:** `docker-compose logs -f`
-- **Rebuild production:** `docker-compose up --build`
-- **Rebuild development:** `docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build`
-- **Production logs:** `docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f`
-
-#### Environment Variables
-Set these environment variables for production:
-- `SECRET_KEY`: Your Flask secret key (required for production)
-- `DATABASE`: Database file path (default: `/app/data/splitwise.db`)
-- `FLASK_ENV`: Set to `production` for production deployment
-
-#### Troubleshooting Docker
-
-**Static files not loading (CSS/JS missing):**
-- Make sure you're not mounting static files as volumes in production
-- Rebuild the container: `docker-compose up --build`
-- Check that static files exist in the container: `docker exec -it smart-split-web ls -la /app/static/`
-
-**Database not persisting:**
-- Ensure the `./data` directory exists on your host
-- Check volume mounts: `docker-compose config`
-
-**Container not starting:**
-- Check logs: `docker-compose logs -f`
-- Verify port 3066 is not in use: `lsof -i :3066`
-
-## PWA Features
-
-### Service Worker
-- Caches static assets for offline use
-- Provides offline fallback pages
-- Implements cache-first strategy for better performance
-
-### Web App Manifest
-- Defines app metadata (name, icons, theme colors)
-- Enables "Add to Home Screen" functionality
-- Configures standalone display mode
-
-### Responsive Design
-- Mobile-first approach
-- Flexible grid layout
-- Touch-friendly interface
-
-### Install Prompt
-- Custom install button when PWA is installable
-- Handles browser install events
-- Cross-platform compatibility
-
-## API Endpoints
-
-- `GET /` - Main application page
-- `GET /offline` - Offline fallback page
-- `GET /manifest.json` - PWA manifest file
-- `GET /sw.js` - Service worker script
-- `GET /api/data` - Sample API endpoint
-
-## Customization
-
-### Changing App Details
-1. Update `manifest.json` with your app's name, description, and theme colors
-2. Replace icons in `static/icons/` with your own (maintain same sizes)
-3. Update the title and content in templates
-4. Modify CSS variables in `style.css` for custom theming
-
-### Adding New Features
-1. Add new routes in `app.py`
-2. Create corresponding templates in `templates/`
-3. Update the service worker cache list if needed
-4. Add new API endpoints as required
-
-### Deployment
-For production deployment:
-
-#### Traditional Deployment
-1. Set `debug=False` in `app.py`
-2. Use a production WSGI server like Gunicorn:
-   ```bash
-   gunicorn -w 4 -b 0.0.0.0:3000 app:app
-   ```
-
-#### Docker Deployment (Recommended)
-1. Use the production Docker configuration:
-   ```bash
-   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-   ```
-2. Set the `SECRET_KEY` environment variable:
-   ```bash
-   export SECRET_KEY=your-secure-production-key
-   ```
-
-#### General Requirements
-1. Configure HTTPS (required for PWA features)
-2. Update manifest start_url for your domain
-3. Ensure database persistence (Docker volumes handle this automatically)
-
-## Browser Support
-
-This PWA works on all modern browsers that support:
-- Service Workers
-- Web App Manifest
-- Cache API
-- Fetch API
-
-### Supported Browsers:
-- Chrome 40+
-- Firefox 44+
-- Safari 11.1+
-- Edge 17+
-
-## Testing PWA Features
-
-1. **Install Prompt**: Visit the site on a supported mobile browser
-2. **Offline Functionality**: Turn off network connection and reload
-3. **Service Worker**: Check browser developer tools → Application → Service Workers
-4. **Manifest**: Check browser developer tools → Application → Manifest
-
-## Development
-
-### Running in Development
-```bash
-python app.py
+# Optional - database path (defaults to splitwise.db)
+DATABASE=splitwise.db
 ```
 
-### Testing Service Worker
-1. Open Chrome DevTools
-2. Go to Application tab
-3. Check Service Workers section
-4. Use "Offline" checkbox to test offline functionality
+## 🐳 Docker Deployment
 
-### Lighthouse Audit
-Run a Lighthouse audit to check PWA compliance:
-1. Open Chrome DevTools
-2. Go to Lighthouse tab
-3. Run "Progressive Web App" audit
+### Production
+```bash
+docker compose up -d --build
+```
 
-## License
+### Development
+```bash
+docker compose --profile development up --build smart-split-dev
+```
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+The application will be available at:
+- Production: http://localhost:3077
+- Development: http://localhost:3000
 
-## Contributing
+### Volumes
+- `./data` - SQLite database persistence
+- `./uploads` - Receipt image storage
+
+## 📖 Usage Guide
+
+### Getting Started
+1. **Register** a new account or **login** with existing credentials
+2. **Create a group** for your shared expenses (e.g., "Weekend Trip")
+3. **Invite friends** using the generated invite code or QR code
+4. **Add expenses** manually or by scanning receipts
+
+### Adding Expenses
+- **Manual Entry**: Enter description, amount, and select who paid
+- **Receipt Scanning**: Upload a photo, let AI extract items, select what to include
+- **Cost Splitting**: Expenses are automatically split among group members
+
+### Managing Groups
+- **View Group Details**: See all expenses, members, and balances
+- **Group Admin**: Invite/remove members, manage group settings
+- **Leave Group**: Exit groups you no longer need
+
+### Settling Up
+- **View Balances**: Dashboard shows what you owe and what you're owed
+- **Settlement Suggestions**: App calculates optimal payment paths
+- **Bank Integration**: Add IBAN/BIC for easy bank transfers
+
+## 🔧 Features Overview
+
+### Core Routes
+- `/` - Home page with authentication
+- `/dashboard` - Personal expense overview
+- `/groups` - Group management
+- `/groups/create` - Create new groups
+- `/groups/{id}` - Group details and expenses
+- `/groups/{id}/add_expense` - Add new expenses
+- `/groups/{id}/scan_receipt` - AI receipt scanning
+- `/settings` - User profile and bank details
+
+### API Endpoints
+- User authentication (login/register/logout)
+- Group CRUD operations
+- Expense management
+- Receipt processing with AI
+- Balance calculations
+- QR code generation
+
+### Database Schema
+- **Users**: Authentication and profile data
+- **Groups**: Expense groups with invite codes
+- **Group Members**: Many-to-many user-group relationships
+- **Expenses**: Individual expense records
+- **Expense Splits**: How expenses are divided among members
+
+## 🔒 Security Features
+
+- Password hashing with werkzeug
+- CSRF protection on all forms
+- Secure session management
+- Input validation and sanitization
+- SQL injection prevention
+- File upload restrictions (7MB limit)
+
+## 📱 PWA Features
+
+- **Installable**: Add to home screen on mobile devices
+- **Offline Support**: Basic functionality without internet
+- **Responsive Design**: Works on all screen sizes
+- **Fast Loading**: Service worker caching
+- **App-like Experience**: Full-screen mode, custom icons
+
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## Support
+## 📝 License
 
-For issues and questions:
-1. Check the browser console for error messages
-2. Verify HTTPS is enabled (required for PWA features)
-3. Test in multiple browsers
-4. Check service worker registration status
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+If you encounter any issues:
+
+1. Check the [Docker documentation](DOCKER.md) for deployment issues
+2. Ensure all environment variables are properly set
+3. Verify that the uploads and data directories are writable
+4. Check the application logs for detailed error messages
+
+## 🚀 Roadmap
+
+- [ ] Mobile app versions (React Native/Flutter)
+- [ ] Multiple currency support
+- [ ] Advanced expense categories
+- [ ] Email notifications
+- [ ] Export functionality (PDF/CSV)
+- [ ] Integration with banking APIs
+- [ ] Advanced analytics and reporting
+
+---
+
+**Smart Split** - Making expense sharing simple and smart! 💰✨

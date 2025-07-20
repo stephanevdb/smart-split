@@ -1,6 +1,6 @@
 # Docker Setup for Smart Split
 
-This document explains how to run the Smart Split application using Docker.
+This document explains how to run the Smart Split expense sharing application using Docker for development and production deployments.
 
 ## Quick Start
 
@@ -74,12 +74,12 @@ docker run -p 3000:3000 \
 
 ## Volumes and Persistence
 
-The application uses two important volumes for data persistence:
+Smart Split uses two important volumes for data persistence:
 
-- `./data:/app/data` - SQLite database storage
-- `./uploads:/app/uploads` - User uploaded files (receipts)
+- `./data:/app/data` - SQLite database storage (user accounts, groups, expenses, settlements)
+- `./uploads:/app/uploads` - User uploaded receipt images for AI processing
 
-These directories will be automatically created and will persist your data between container restarts.
+These directories will be automatically created and will persist your expense data between container restarts.
 
 ## Environment Variables
 
