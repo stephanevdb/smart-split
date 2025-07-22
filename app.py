@@ -1425,6 +1425,115 @@ def expense_detail(group_id, expense_id):
                          expense_shares=shares_list,
                          group=group_dict)
 
+@app.route('/groups/<int:group_id>/balance-details')
+@login_required
+def balance_details(group_id):
+    """Show detailed balance calculation breakdown"""
+    conn = get_db_connection()
+    
+    # Check if user is member of group
+    membership = conn.execute('''
+        SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?
+    ''', (group_id, current_user.id)).fetchone()
+    
+    if not membership:
+        flash('You are not a member of this group.', 'error')
+        conn.close()
+        return redirect(url_for('groups'))
+    
+    # Get group info
+    group = conn.execute('SELECT * FROM groups WHERE id = ?', (group_id,)).fetchone()
+    
+    # Get all group members
+    members = get_group_members(group_id)
+    
+    # Get all expenses with detailed information
+    expenses = conn.execute('''
+        SELECT e.*, 
+               up.username as paid_by_name, 
+               uc.username as created_by_name
+        FROM expenses e
+        JOIN users up ON e.paid_by = up.id
+        JOIN users uc ON e.created_by = uc.id
+        WHERE e.group_id = ?
+        ORDER BY e.created_at DESC
+    ''', (group_id,)).fetchall()
+    
+    # Get all expense shares
+    expense_shares = conn.execute('''
+        SELECT es.*, e.description as expense_description, e.created_at, u.username
+        FROM expense_shares es
+        JOIN expenses e ON es.expense_id = e.id
+        JOIN users u ON es.user_id = u.id
+        WHERE e.group_id = ?
+        ORDER BY e.created_at DESC, u.username
+    ''', (group_id,)).fetchall()
+    
+    # Get all settlements
+    settlements = conn.execute('''
+        SELECT s.*, 
+               up.username as payer_name, 
+               ue.username as payee_name
+        FROM settlements s
+        JOIN users up ON s.payer_id = up.id
+        JOIN users ue ON s.payee_id = ue.id
+        WHERE s.group_id = ?
+        ORDER BY s.created_at DESC
+    ''', (group_id,)).fetchall()
+    
+    conn.close()
+    
+    # Calculate balances for display
+    balances = calculate_balances(group_id)
+    
+    # Organize data by member for detailed view
+    member_details = {}
+    for member in members:
+        member_id = member['id']
+        member_details[member_id] = {
+            'member': dict(member),
+            'balance': balances.get(member_id, 0),
+            'expenses_paid': [],
+            'expense_shares': [],
+            'settlements_made': [],
+            'settlements_received': []
+        }
+    
+    # Add expense details
+    for expense in expenses:
+        paid_by_id = expense['paid_by']
+        if paid_by_id in member_details:
+            member_details[paid_by_id]['expenses_paid'].append(dict(expense))
+    
+    # Add expense share details
+    for share in expense_shares:
+        user_id = share['user_id']
+        if user_id in member_details:
+            member_details[user_id]['expense_shares'].append(dict(share))
+    
+    # Add settlement details
+    for settlement in settlements:
+        payer_id = settlement['payer_id']
+        payee_id = settlement['payee_id']
+        
+        if payer_id in member_details:
+            member_details[payer_id]['settlements_made'].append(dict(settlement))
+        
+        if payee_id in member_details:
+            member_details[payee_id]['settlements_received'].append(dict(settlement))
+    
+    # Calculate summary statistics
+    total_expenses = len(expenses)
+    total_settlements = len(settlements)
+    
+    return render_template('groups/balance_details.html', 
+                         group=dict(group), 
+                         members=members,
+                         member_details=member_details,
+                         balances=balances,
+                         total_expenses=total_expenses,
+                         total_settlements=total_settlements)
+
 @app.route('/groups/<int:group_id>/admin', methods=['GET', 'POST'])
 @login_required
 def group_admin(group_id):

@@ -1,0 +1,423 @@
+{% extends "base.html" %}
+
+{% block title %}Balance Details - {{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="balance-details-container">
+        <!-- Header -->
+        <div class="balance-details-header">
+            <div class="header-title">
+                <h2>📊 Balance Calculation Details</h2>
+                <p>How balances are calculated in <strong>{{ group.name }}</strong></p>
+            </div>
+            <div class="header-actions">
+                <a href="{{ url_for('group_detail', group_id=group.id) }}" class="btn btn-secondary">
+                    <span class="btn-icon">←</span>
+                    Back to Group
+                </a>
+            </div>
+        </div>
+
+        <!-- Calculation Logic Explanation -->
+        <div class="calculation-explanation">
+            <div class="explanation-card">
+                <h3>🧮 How We Calculate Balances</h3>
+                <div class="calculation-steps">
+                    <div class="step">
+                        <div class="step-icon">➕</div>
+                        <div class="step-content">
+                            <strong>Add:</strong> Money you paid for expenses
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-icon">➖</div>
+                        <div class="step-content">
+                            <strong>Subtract:</strong> Your share of all expenses
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-icon">💳</div>
+                        <div class="step-content">
+                            <strong>Add:</strong> Payments you made to others
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-icon">💰</div>
+                        <div class="step-content">
+                            <strong>Subtract:</strong> Payments you received
+                        </div>
+                    </div>
+                </div>
+                <div class="result-explanation">
+                    <strong>Result:</strong> Positive = You're owed money | Negative = You owe money
+                </div>
+            </div>
+        </div>
+
+        <!-- Member Balance Breakdowns -->
+        <div class="member-breakdowns">
+            {% for member_id, details in member_details.items() %}
+                <div class="member-breakdown">
+                    <div class="member-breakdown-header">
+                        <div class="member-info">
+                            <div class="member-avatar">{{ details.member.username[0].upper() }}</div>
+                            <div class="member-details">
+                                <h3>{{ details.member.username }}
+                                    {% if details.member.id == current_user.id %}
+                                        <span class="you-indicator">(You)</span>
+                                    {% endif %}
+                                </h3>
+                                <div class="current-balance">
+                                    Current Balance: 
+                                    {% if details.balance > 0 %}
+                                        <span class="positive">+€{{ "%.2f"|format(details.balance) }}</span>
+                                        <small>(is owed)</small>
+                                    {% elif details.balance < 0 %}
+                                        <span class="negative">-€{{ "%.2f"|format(-details.balance) }}</span>
+                                        <small>(owes)</small>
+                                    {% else %}
+                                        <span class="neutral">€0.00</span>
+                                        <small>(settled)</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mobile-controls">
+                        <button class="btn btn-small btn-secondary mobile-only" onclick="toggleAllSections(this)">
+                            <span class="control-text">Show All Sections</span>
+                        </button>
+                    </div>
+                    
+                    <div class="breakdown-sections">
+                        <!-- Expenses Paid (Credits) -->
+                        <div class="breakdown-section credits">
+                            <h4 class="breakdown-section-header" onclick="toggleMobileSection(this)">
+                                ➕ Expenses Paid (Credits)
+                                <span class="mobile-toggle">▼</span>
+                            </h4>
+                            <div class="breakdown-section-content">
+                                {% if details.expenses_paid %}
+                                    <div class="transactions-list">
+                                        {% for expense in details.expenses_paid %}
+                                            <div class="transaction-item">
+                                                <div class="transaction-info">
+                                                    <div class="transaction-description">{{ expense.description }}</div>
+                                                    <div class="transaction-date">
+                                                        {% if expense.created_at.strftime %}
+                                                            {{ expense.created_at.strftime('%b %d, %Y') }}
+                                                        {% else %}
+                                                            {{ expense.created_at }}
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div class="transaction-amount positive">+€{{ "%.2f"|format(expense.amount) }}</div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="section-total positive">
+                                        Total Credits: +€{{ "%.2f"|format(details.expenses_paid|sum(attribute='amount')) }}
+                                    </div>
+                                {% else %}
+                                    <div class="no-transactions">No expenses paid</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Expense Shares (Debits) -->
+                        <div class="breakdown-section debits">
+                            <h4 class="breakdown-section-header" onclick="toggleMobileSection(this)">
+                                ➖ Your Share of Expenses (Debits)
+                                <span class="mobile-toggle">▼</span>
+                            </h4>
+                            <div class="breakdown-section-content">
+                            {% if details.expense_shares %}
+                                <div class="transactions-list">
+                                    {% for share in details.expense_shares %}
+                                        <div class="transaction-item">
+                                            <div class="transaction-info">
+                                                <div class="transaction-description">{{ share.expense_description }}</div>
+                                                <div class="transaction-date">
+                                                    {% if share.created_at.strftime %}
+                                                        {{ share.created_at.strftime('%b %d, %Y') }}
+                                                    {% else %}
+                                                        {{ share.created_at }}
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="transaction-amount negative">-€{{ "%.2f"|format(share.amount) }}</div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="section-total negative">
+                                    Total Debits: -€{{ "%.2f"|format(details.expense_shares|sum(attribute='amount')) }}
+                                </div>
+                            {% else %}
+                                <div class="no-transactions">No expense shares</div>
+                            {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Settlements Made -->
+                        {% if details.settlements_made %}
+                            <div class="breakdown-section settlements">
+                                <h4 class="breakdown-section-header" onclick="toggleMobileSection(this)">
+                                    💳 Payments Made
+                                    <span class="mobile-toggle">▼</span>
+                                </h4>
+                                <div class="breakdown-section-content">
+                                <div class="transactions-list">
+                                    {% for settlement in details.settlements_made %}
+                                        <div class="transaction-item">
+                                            <div class="transaction-info">
+                                                <div class="transaction-description">
+                                                    Payment to {{ settlement.payee_name }}
+                                                    {% if settlement.description %}
+                                                        - {{ settlement.description }}
+                                                    {% endif %}
+                                                </div>
+                                                <div class="transaction-date">
+                                                    {% if settlement.created_at.strftime %}
+                                                        {{ settlement.created_at.strftime('%b %d, %Y') }}
+                                                    {% else %}
+                                                        {{ settlement.created_at }}
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="transaction-amount positive">+€{{ "%.2f"|format(settlement.amount) }}</div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="section-total positive">
+                                    Total Payments Made: +€{{ "%.2f"|format(details.settlements_made|sum(attribute='amount')) }}
+                                </div>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <!-- Settlements Received -->
+                        {% if details.settlements_received %}
+                            <div class="breakdown-section settlements">
+                                <h4 class="breakdown-section-header" onclick="toggleMobileSection(this)">
+                                    💰 Payments Received
+                                    <span class="mobile-toggle">▼</span>
+                                </h4>
+                                <div class="breakdown-section-content">
+                                <div class="transactions-list">
+                                    {% for settlement in details.settlements_received %}
+                                        <div class="transaction-item">
+                                            <div class="transaction-info">
+                                                <div class="transaction-description">
+                                                    Payment from {{ settlement.payer_name }}
+                                                    {% if settlement.description %}
+                                                        - {{ settlement.description }}
+                                                    {% endif %}
+                                                </div>
+                                                <div class="transaction-date">
+                                                    {% if settlement.created_at.strftime %}
+                                                        {{ settlement.created_at.strftime('%b %d, %Y') }}
+                                                    {% else %}
+                                                        {{ settlement.created_at }}
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="transaction-amount negative">-€{{ "%.2f"|format(settlement.amount) }}</div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="section-total negative">
+                                    Total Payments Received: -€{{ "%.2f"|format(details.settlements_received|sum(attribute='amount')) }}
+                                </div>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <!-- Final Calculation -->
+                        <div class="final-calculation">
+                            <div class="calculation-formula">
+                                <h4>🧮 Final Calculation</h4>
+                                <div class="formula-parts">
+                                    <div class="formula-part">
+                                        <span class="label">Expenses Paid:</span>
+                                        <span class="value positive">+€{{ "%.2f"|format(details.expenses_paid|sum(attribute='amount') if details.expenses_paid else 0) }}</span>
+                                    </div>
+                                    <div class="formula-operator">-</div>
+                                    <div class="formula-part">
+                                        <span class="label">Your Shares:</span>
+                                        <span class="value negative">€{{ "%.2f"|format(details.expense_shares|sum(attribute='amount') if details.expense_shares else 0) }}</span>
+                                    </div>
+                                    {% if details.settlements_made %}
+                                        <div class="formula-operator">+</div>
+                                        <div class="formula-part">
+                                            <span class="label">Payments Made:</span>
+                                            <span class="value positive">€{{ "%.2f"|format(details.settlements_made|sum(attribute='amount')) }}</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if details.settlements_received %}
+                                        <div class="formula-operator">-</div>
+                                        <div class="formula-part">
+                                            <span class="label">Payments Received:</span>
+                                            <span class="value negative">€{{ "%.2f"|format(details.settlements_received|sum(attribute='amount')) }}</span>
+                                        </div>
+                                    {% endif %}
+                                    <div class="formula-operator">=</div>
+                                    <div class="formula-result">
+                                        {% if details.balance > 0 %}
+                                            <span class="positive">+€{{ "%.2f"|format(details.balance) }}</span>
+                                        {% elif details.balance < 0 %}
+                                            <span class="negative">-€{{ "%.2f"|format(-details.balance) }}</span>
+                                        {% else %}
+                                            <span class="neutral">€0.00</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Summary -->
+        <div class="balance-summary">
+            <div class="summary-card">
+                <h3>📋 Group Summary</h3>
+                <div class="summary-stats">
+                    <div class="stat">
+                        <div class="stat-label">Total Members</div>
+                        <div class="stat-value">{{ members|length }}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Total Expenses</div>
+                        <div class="stat-value">{{ total_expenses }}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Total Settlements</div>
+                        <div class="stat-value">{{ total_settlements }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add smooth scrolling to current user's section
+    const currentUserSection = document.querySelector('.you-indicator');
+    if (currentUserSection) {
+        currentUserSection.closest('.member-breakdown').scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+        });
+    }
+    
+    // Initialize mobile sections - start with most important ones expanded
+    initializeMobileSections();
+});
+
+function toggleMobileSection(header) {
+    // Only toggle on mobile devices
+    if (window.innerWidth <= 768) {
+        const content = header.nextElementSibling;
+        const toggle = header.querySelector('.mobile-toggle');
+        
+        if (content.classList.contains('collapsed')) {
+            content.classList.remove('collapsed');
+            toggle.classList.remove('collapsed');
+        } else {
+            content.classList.add('collapsed');
+            toggle.classList.add('collapsed');
+        }
+        
+        // Update the show/hide all button text
+        updateShowAllButtonText();
+    }
+}
+
+function initializeMobileSections() {
+    // Only apply on mobile devices
+    if (window.innerWidth <= 768) {
+        const sections = document.querySelectorAll('.breakdown-section-content');
+        const headers = document.querySelectorAll('.breakdown-section-header');
+        
+        // Collapse all sections except the first one (Expenses Paid) for each member
+        sections.forEach((section, index) => {
+            const header = headers[index];
+            const toggle = header?.querySelector('.mobile-toggle');
+            
+            // Keep first section of each member expanded (Expenses Paid)
+            const isFirstSectionOfMember = header?.textContent.includes('Expenses Paid');
+            
+            if (!isFirstSectionOfMember) {
+                section.classList.add('collapsed');
+                if (toggle) toggle.classList.add('collapsed');
+            }
+        });
+        
+        // Update the show/hide all button text
+        updateShowAllButtonText();
+    }
+}
+
+function toggleAllSections(button) {
+    if (window.innerWidth <= 768) {
+        const sections = document.querySelectorAll('.breakdown-section-content');
+        const toggles = document.querySelectorAll('.mobile-toggle');
+        const controlText = button.querySelector('.control-text');
+        
+        // Check if most sections are collapsed
+        const collapsedSections = document.querySelectorAll('.breakdown-section-content.collapsed');
+        const shouldExpand = collapsedSections.length > sections.length / 2;
+        
+        sections.forEach(section => {
+            if (shouldExpand) {
+                section.classList.remove('collapsed');
+            } else {
+                section.classList.add('collapsed');
+            }
+        });
+        
+        toggles.forEach(toggle => {
+            if (shouldExpand) {
+                toggle.classList.remove('collapsed');
+            } else {
+                toggle.classList.add('collapsed');
+            }
+        });
+        
+        // Update button text
+        controlText.textContent = shouldExpand ? 'Hide All Sections' : 'Show All Sections';
+    }
+}
+
+function updateShowAllButtonText() {
+    const button = document.querySelector('.mobile-controls .control-text');
+    if (button && window.innerWidth <= 768) {
+        const collapsedSections = document.querySelectorAll('.breakdown-section-content.collapsed');
+        const totalSections = document.querySelectorAll('.breakdown-section-content').length;
+        
+        button.textContent = collapsedSections.length > totalSections / 2 ? 'Show All Sections' : 'Hide All Sections';
+    }
+}
+
+// Re-initialize on window resize
+window.addEventListener('resize', function() {
+    if (window.innerWidth > 768) {
+        // Remove collapsed state on desktop
+        const sections = document.querySelectorAll('.breakdown-section-content');
+        const toggles = document.querySelectorAll('.mobile-toggle');
+        
+        sections.forEach(section => section.classList.remove('collapsed'));
+        toggles.forEach(toggle => toggle.classList.remove('collapsed'));
+    } else {
+        // Re-initialize for mobile
+        initializeMobileSections();
+    }
+});
+</script>
+{% endblock %} 

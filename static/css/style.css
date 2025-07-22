@@ -4501,6 +4501,745 @@ body.dark-mode .invite-actions {
     font-style: italic;
 }
 
+/* Balance Details Styles */
+.balance-details-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.balance-details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.header-title h2 {
+    color: var(--primary-700);
+    margin: 0 0 0.5rem 0;
+    font-size: 1.75rem;
+    font-weight: var(--font-weight-bold);
+}
+
+.header-title p {
+    color: var(--gray-600);
+    margin: 0;
+    font-size: 1rem;
+}
+
+.calculation-explanation {
+    margin-bottom: 2rem;
+}
+
+.explanation-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.explanation-card h3 {
+    color: var(--gray-800);
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-semibold);
+}
+
+.calculation-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+}
+
+.step-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.step-content {
+    color: var(--gray-700);
+    font-size: 0.875rem;
+}
+
+.result-explanation {
+    background: var(--primary-50);
+    border: 1px solid var(--primary-200);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    color: var(--primary-800);
+    text-align: center;
+    font-weight: var(--font-weight-medium);
+}
+
+.member-breakdowns {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.member-breakdown {
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.member-breakdown-header {
+    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+    color: white;
+    padding: 1.5rem;
+}
+
+.member-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.member-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: var(--font-weight-bold);
+    font-size: 1.25rem;
+}
+
+.member-details h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-bold);
+}
+
+.current-balance {
+    opacity: 0.9;
+    font-size: 1rem;
+}
+
+.current-balance small {
+    opacity: 0.8;
+    margin-left: 0.5rem;
+}
+
+.breakdown-sections {
+    padding: 1.5rem;
+}
+
+.breakdown-section {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+}
+
+.breakdown-section.credits {
+    background: rgba(16, 185, 129, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.breakdown-section.debits {
+    background: rgba(239, 68, 68, 0.05);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.breakdown-section.settlements {
+    background: rgba(99, 102, 241, 0.05);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.breakdown-section h4 {
+    margin: 0 0 1rem 0;
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-semibold);
+    color: var(--gray-800);
+}
+
+.breakdown-section-header {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.breakdown-section-header:hover {
+    color: var(--primary-600);
+}
+
+.mobile-toggle {
+    font-size: 0.875rem;
+    transition: transform 0.2s ease;
+    display: none;
+}
+
+.breakdown-section-content {
+    transition: all 0.3s ease;
+}
+
+.mobile-controls {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.mobile-only {
+    display: none;
+}
+
+.transactions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.transaction-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: white;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--gray-200);
+}
+
+.transaction-info {
+    flex: 1;
+}
+
+.transaction-description {
+    font-weight: var(--font-weight-medium);
+    color: var(--gray-800);
+    margin-bottom: 0.25rem;
+}
+
+.transaction-date {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+}
+
+.transaction-amount {
+    font-weight: var(--font-weight-bold);
+    font-size: 1rem;
+}
+
+.section-total {
+    text-align: right;
+    font-weight: var(--font-weight-bold);
+    font-size: 1.125rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: var(--radius-sm);
+}
+
+.no-transactions {
+    text-align: center;
+    color: var(--gray-500);
+    font-style: italic;
+    padding: 1rem;
+}
+
+.final-calculation {
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    margin-top: 1rem;
+}
+
+.calculation-formula h4 {
+    margin: 0 0 1rem 0;
+    color: var(--gray-800);
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-semibold);
+}
+
+.formula-parts {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.formula-part {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.formula-part .label {
+    font-size: 0.75rem;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.formula-part .value {
+    font-weight: var(--font-weight-bold);
+    font-size: 1rem;
+}
+
+.formula-operator {
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-bold);
+    color: var(--gray-600);
+}
+
+.formula-result {
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-bold);
+    padding: 0.5rem 1rem;
+    background: white;
+    border-radius: var(--radius-md);
+    border: 2px solid var(--primary-200);
+}
+
+.balance-summary {
+    margin-top: 2rem;
+}
+
+.summary-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.summary-card h3 {
+    margin: 0 0 1rem 0;
+    color: var(--gray-800);
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-semibold);
+}
+
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.stat {
+    text-align: center;
+    padding: 1rem;
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-bold);
+    color: var(--gray-800);
+}
+
+.balances-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.balances-header h3 {
+    margin: 0;
+}
+
+/* Mobile Responsiveness for Balance Details */
+@media (max-width: 768px) {
+    .balance-details-container {
+        padding: 0 0.5rem;
+    }
+    
+    .balance-details-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .header-title h2 {
+        font-size: 1.5rem;
+    }
+    
+    .header-title p {
+        font-size: 0.9rem;
+    }
+    
+    .calculation-explanation {
+        margin-bottom: 1.5rem;
+    }
+    
+    .explanation-card {
+        padding: 1rem;
+    }
+    
+    .explanation-card h3 {
+        font-size: 1.125rem;
+    }
+    
+    .calculation-steps {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .step {
+        padding: 0.75rem;
+        gap: 0.5rem;
+    }
+    
+    .step-icon {
+        font-size: 1.25rem;
+    }
+    
+    .step-content {
+        font-size: 0.8rem;
+    }
+    
+    .result-explanation {
+        padding: 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    .member-breakdowns {
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .member-breakdown-header {
+        padding: 1rem;
+    }
+    
+    .member-info {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.75rem;
+    }
+    
+    .member-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+        align-self: center;
+    }
+    
+    .member-details h3 {
+        font-size: 1.25rem;
+        text-align: center;
+    }
+    
+    .current-balance {
+        font-size: 0.9rem;
+        text-align: center;
+    }
+    
+    .breakdown-sections {
+        padding: 1rem;
+    }
+    
+    .breakdown-section {
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+    }
+    
+    .breakdown-section h4 {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .mobile-toggle {
+        display: inline-block !important;
+    }
+    
+    .mobile-only {
+        display: inline-flex !important;
+    }
+    
+    .breakdown-section-content.collapsed {
+        display: none;
+    }
+    
+    .breakdown-section-header .mobile-toggle.collapsed {
+        transform: rotate(-90deg);
+    }
+    
+    .transactions-list {
+        gap: 0.5rem;
+    }
+    
+    .transaction-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+        text-align: left;
+        padding: 0.75rem;
+    }
+    
+    .transaction-info {
+        text-align: center;
+    }
+    
+    .transaction-description {
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .transaction-date {
+        font-size: 0.8rem;
+    }
+    
+    .transaction-amount {
+        font-size: 1.1rem;
+        text-align: center;
+        margin-top: 0.25rem;
+    }
+    
+    .section-total {
+        font-size: 1rem;
+        padding: 0.5rem;
+        text-align: center;
+    }
+    
+    .final-calculation {
+        padding: 1rem;
+        margin-top: 0.75rem;
+    }
+    
+    .calculation-formula h4 {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+        text-align: center;
+    }
+    
+    .formula-parts {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: center;
+    }
+    
+    .formula-part {
+        text-align: center;
+        min-width: 120px;
+    }
+    
+    .formula-part .label {
+        font-size: 0.7rem;
+    }
+    
+    .formula-part .value {
+        font-size: 1rem;
+    }
+    
+    .formula-operator {
+        font-size: 1.25rem;
+        transform: none;
+        order: 1;
+        background: var(--primary-100);
+        color: var(--primary-700);
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .formula-result {
+        font-size: 1.25rem;
+        padding: 0.75rem;
+        margin-top: 0.5rem;
+        text-align: center;
+    }
+    
+    .balance-summary {
+        margin-top: 1.5rem;
+    }
+    
+    .summary-card {
+        padding: 1rem;
+    }
+    
+    .summary-card h3 {
+        font-size: 1.125rem;
+        text-align: center;
+    }
+    
+    .summary-stats {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .stat {
+        padding: 0.75rem;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+    }
+    
+    .stat-value {
+        font-size: 1.25rem;
+    }
+    
+    .balances-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+    
+    .balances-header h3 {
+        text-align: center;
+        font-size: 1.125rem;
+    }
+    
+    .balances-header .btn {
+        align-self: center;
+        max-width: 200px;
+    }
+}
+
+/* Extra small mobile devices */
+@media (max-width: 480px) {
+    .balance-details-container {
+        padding: 0 0.25rem;
+    }
+    
+    .header-title h2 {
+        font-size: 1.25rem;
+        text-align: center;
+    }
+    
+    .header-title p {
+        font-size: 0.85rem;
+        text-align: center;
+    }
+    
+    .explanation-card {
+        padding: 0.75rem;
+    }
+    
+    .step {
+        padding: 0.5rem;
+        text-align: center;
+    }
+    
+    .step-content {
+        font-size: 0.75rem;
+    }
+    
+    .member-breakdown-header {
+        padding: 0.75rem;
+    }
+    
+    .member-details h3 {
+        font-size: 1.125rem;
+    }
+    
+    .breakdown-sections {
+        padding: 0.75rem;
+    }
+    
+    .breakdown-section {
+        padding: 0.5rem;
+    }
+    
+    .breakdown-section h4 {
+        font-size: 0.9rem;
+        text-align: center;
+    }
+    
+    .transaction-item {
+        padding: 0.5rem;
+    }
+    
+    .transaction-description {
+        font-size: 0.85rem;
+        font-weight: var(--font-weight-semibold);
+    }
+    
+    .transaction-date {
+        font-size: 0.75rem;
+    }
+    
+    .transaction-amount {
+        font-size: 1.05rem;
+        font-weight: var(--font-weight-bold);
+    }
+    
+    .final-calculation {
+        padding: 0.75rem;
+    }
+    
+    .formula-part .label {
+        font-size: 0.65rem;
+    }
+    
+    .formula-part .value {
+        font-size: 0.9rem;
+    }
+    
+    .formula-operator {
+        font-size: 1rem;
+        width: 25px;
+        height: 25px;
+    }
+    
+    .formula-result {
+        font-size: 1.125rem;
+        padding: 0.5rem;
+    }
+    
+    .summary-card {
+        padding: 0.75rem;
+    }
+    
+    .stat {
+        padding: 0.5rem;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+    }
+    
+    .stat-value {
+        font-size: 1.125rem;
+    }
+    
+    .btn {
+        font-size: 0.8rem;
+        padding: 0.75rem 1rem;
+        min-height: 44px; /* Better touch target */
+    }
+    
+    .btn-small {
+        font-size: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        min-height: 40px;
+    }
+}
+
 /* Mobile Responsiveness for Expense Details */
 @media (max-width: 768px) {
     .expense-header {

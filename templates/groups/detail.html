@@ -105,7 +105,13 @@
     {% endif %}
     <!-- Balances Overview -->
     <div class="balances-section">
-        <h3>📊 Balance Overview</h3>
+        <div class="balances-header">
+            <h3>📊 Balance Overview</h3>
+            <a href="{{ url_for('balance_details', group_id=group.id) }}" class="btn btn-secondary btn-small">
+                <span class="btn-icon">🧮</span>
+                View Calculation Details
+            </a>
+        </div>
         <div class="balances-chart" id="balancesChart">
             <!-- Balances will be rendered here -->
         </div>

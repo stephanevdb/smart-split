@@ -32,6 +32,7 @@ A modern Progressive Web App (PWA) for splitting expenses with friends and group
 ### 📊 Dashboard & Analytics
 - Personal dashboard with expense overview
 - Balance summaries (what you owe vs. what you're owed)
+- **Detailed balance calculation breakdown** showing exactly how balances are computed 🧮
 - Recent activity tracking
 - Group statistics
 
@@ -183,6 +184,7 @@ The application will be available at:
 - `/groups` - Group management
 - `/groups/create` - Create new groups
 - `/groups/{id}` - Group details and expenses
+- `/groups/{id}/balance-details` - **Detailed balance calculation breakdown**
 - `/groups/{id}/expenses/{expense_id}` - **Detailed expense view**
 - `/groups/{id}/add_expense` - Add new expenses
 - `/groups/{id}/scan_receipt` - AI receipt scanning
