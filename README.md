@@ -19,6 +19,7 @@ A modern Progressive Web App (PWA) for splitting expenses with friends and group
 ### 💸 Expense Tracking
 - Add expenses with custom descriptions and amounts
 - Split costs among group members
+- **Detailed expense views with breakdown of who owes what**
 - Automatic balance calculations
 - Track who owes what to whom
 
@@ -182,6 +183,7 @@ The application will be available at:
 - `/groups` - Group management
 - `/groups/create` - Create new groups
 - `/groups/{id}` - Group details and expenses
+- `/groups/{id}/expenses/{expense_id}` - **Detailed expense view**
 - `/groups/{id}/add_expense` - Add new expenses
 - `/groups/{id}/scan_receipt` - AI receipt scanning
 - `/settings` - User profile and bank details

@@ -1367,6 +1367,64 @@ def select_receipt_items(group_id):
                          receipt_analysis=receipt_analysis,
                          bill_payer_info=bill_payer_info)
 
+@app.route('/groups/<int:group_id>/expenses/<int:expense_id>')
+@login_required
+def expense_detail(group_id, expense_id):
+    """View detailed information about a specific expense"""
+    conn = get_db_connection()
+    
+    # Check if user is member of group
+    membership = conn.execute('''
+        SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?
+    ''', (group_id, current_user.id)).fetchone()
+    
+    if not membership:
+        flash('You are not a member of this group.', 'error')
+        conn.close()
+        return redirect(url_for('groups'))
+    
+    # Get expense details
+    expense = conn.execute('''
+        SELECT e.*, 
+               up.username as paid_by_name, 
+               uc.username as created_by_name,
+               g.name as group_name
+        FROM expenses e
+        JOIN users up ON e.paid_by = up.id
+        JOIN users uc ON e.created_by = uc.id
+        JOIN groups g ON e.group_id = g.id
+        WHERE e.id = ? AND e.group_id = ?
+    ''', (expense_id, group_id)).fetchone()
+    
+    if not expense:
+        flash('Expense not found.', 'error')
+        conn.close()
+        return redirect(url_for('group_detail', group_id=group_id))
+    
+    # Get expense shares (who owes what)
+    expense_shares = conn.execute('''
+        SELECT es.*, u.username, u.id as user_id
+        FROM expense_shares es
+        JOIN users u ON es.user_id = u.id
+        WHERE es.expense_id = ?
+        ORDER BY u.username
+    ''', (expense_id,)).fetchall()
+    
+    # Get group info for navigation
+    group = conn.execute('SELECT * FROM groups WHERE id = ?', (group_id,)).fetchone()
+    
+    conn.close()
+    
+    # Convert to dictionaries for template
+    expense_dict = dict(expense)
+    shares_list = [dict(share) for share in expense_shares]
+    group_dict = dict(group)
+    
+    return render_template('groups/expense_detail.html', 
+                         expense=expense_dict, 
+                         expense_shares=shares_list,
+                         group=group_dict)
+
 @app.route('/groups/<int:group_id>/admin', methods=['GET', 'POST'])
 @login_required
 def group_admin(group_id):

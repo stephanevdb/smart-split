@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}{{ expense.description }} - {{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="expense-detail-container">
+        <!-- Header -->
+        <div class="expense-header">
+            <div class="expense-title">
+                <h2>💸 {{ expense.description }}</h2>
+                <p>in <strong>{{ group.name }}</strong></p>
+            </div>
+            <div class="expense-actions">
+                <a href="{{ url_for('group_detail', group_id=group.id) }}" class="btn btn-secondary">
+                    <span class="btn-icon">←</span>
+                    Back to Group
+                </a>
+            </div>
+        </div>
+
+        <!-- Expense Overview -->
+        <div class="expense-overview">
+            <div class="overview-card">
+                <div class="expense-amount-large">
+                    <span class="currency">€</span>
+                    <span class="amount">{{ "%.2f"|format(expense.amount) }}</span>
+                </div>
+                <div class="expense-meta-large">
+                    <div class="meta-item">
+                        <span class="meta-label">💳 Paid by</span>
+                        <span class="meta-value">{{ expense.paid_by_name }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">📅 Date</span>
+                        <span class="meta-value">
+                            {% if expense.created_at.strftime %}
+                                {{ expense.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                            {% else %}
+                                {{ expense.created_at }}
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">👤 Added by</span>
+                        <span class="meta-value">{{ expense.created_by_name }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Split Breakdown -->
+        <div class="expense-breakdown">
+            <h3>📊 How it's split</h3>
+            <div class="breakdown-container">
+                <div class="breakdown-header">
+                    <div class="col-person">Person</div>
+                    <div class="col-amount">Amount</div>
+                    <div class="col-percentage">% of Total</div>
+                </div>
+                
+                {% for share in expense_shares %}
+                    <div class="breakdown-row {% if share.user_id == current_user.id %}highlight-current-user{% endif %}">
+                        <div class="col-person">
+                            <div class="person-info">
+                                <div class="person-avatar">{{ share.username[0].upper() }}</div>
+                                <span class="person-name">
+                                    {{ share.username }}
+                                    {% if share.user_id == current_user.id %}
+                                        <span class="you-indicator">(You)</span>
+                                    {% endif %}
+                                    {% if share.user_id == expense.paid_by %}
+                                        <span class="paid-indicator">💳 Paid</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-amount">
+                            <span class="share-amount">€{{ "%.2f"|format(share.amount) }}</span>
+                        </div>
+                        <div class="col-percentage">
+                            <span class="percentage">{{ "%.1f"|format((share.amount / expense.amount) * 100) }}%</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="expense-summary">
+            <h3>💰 Summary</h3>
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <div class="summary-icon">👥</div>
+                    <div class="summary-content">
+                        <div class="summary-number">{{ expense_shares|length }}</div>
+                        <div class="summary-label">People involved</div>
+                    </div>
+                </div>
+                
+                <div class="summary-card">
+                    <div class="summary-icon">💳</div>
+                    <div class="summary-content">
+                        <div class="summary-number">€{{ "%.2f"|format(expense.amount) }}</div>
+                        <div class="summary-label">Total amount</div>
+                    </div>
+                </div>
+                
+                <div class="summary-card">
+                    <div class="summary-icon">📊</div>
+                    <div class="summary-content">
+                        <div class="summary-number">€{{ "%.2f"|format(expense.amount / expense_shares|length) }}</div>
+                        <div class="summary-label">Average per person</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Your Share -->
+        {% for share in expense_shares %}
+            {% if share.user_id == current_user.id %}
+                <div class="your-share-section">
+                    <h3>🎯 Your share</h3>
+                    <div class="your-share-card">
+                        {% if share.user_id == expense.paid_by %}
+                            <div class="share-status paid">
+                                <div class="status-icon">✅</div>
+                                <div class="status-content">
+                                    <h4>You paid this expense</h4>
+                                    <p>You paid the full amount of <strong>€{{ "%.2f"|format(expense.amount) }}</strong></p>
+                                    <p>Your share is <strong>€{{ "%.2f"|format(share.amount) }}</strong></p>
+                                    {% if expense.amount > share.amount %}
+                                        <p class="balance-info">Others owe you <strong>€{{ "%.2f"|format(expense.amount - share.amount) }}</strong> for this expense</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="share-status owes">
+                                <div class="status-icon">💰</div>
+                                <div class="status-content">
+                                    <h4>You owe for this expense</h4>
+                                    <p>Your share is <strong>€{{ "%.2f"|format(share.amount) }}</strong></p>
+                                    <p>This amount is owed to <strong>{{ expense.paid_by_name }}</strong></p>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+
+        <!-- Actions -->
+        <div class="expense-actions-section">
+            <div class="actions-grid">
+                <a href="{{ url_for('add_expense', group_id=group.id) }}" class="action-card">
+                    <div class="action-icon">➕</div>
+                    <div class="action-content">
+                        <h4>Add Another Expense</h4>
+                        <p>Add a new expense to this group</p>
+                    </div>
+                </a>
+                
+                <a href="{{ url_for('group_detail', group_id=group.id) }}" class="action-card">
+                    <div class="action-icon">📊</div>
+                    <div class="action-content">
+                        <h4>View All Expenses</h4>
+                        <p>See all expenses in this group</p>
+                    </div>
+                </a>
+                
+                {% if group.created_by == current_user.id %}
+                    <a href="{{ url_for('group_admin', group_id=group.id) }}" class="action-card">
+                        <div class="action-icon">🛠️</div>
+                        <div class="action-content">
+                            <h4>Admin Dashboard</h4>
+                            <p>Manage group settings and balances</p>
+                        </div>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add smooth scrolling to the your share section
+    const yourShareSection = document.querySelector('.your-share-section');
+    if (yourShareSection) {
+        // Highlight the current user's row
+        const currentUserRow = document.querySelector('.breakdown-row.highlight-current-user');
+        if (currentUserRow) {
+            currentUserRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+});
+</script>
+{% endblock %} 

@@ -114,10 +114,11 @@
     <!-- Recent Expenses -->
     <div class="expenses-section">
         <h3>💸 Recent Expenses</h3>
+        <p class="section-hint">Click on any expense to see detailed breakdown</p>
         {% if expenses %}
             <div class="expenses-list">
                 {% for expense in expenses %}
-                    <div class="expense-item">
+                    <a href="{{ url_for('expense_detail', group_id=group.id, expense_id=expense.id) }}" class="expense-item clickable">
                         <div class="expense-info">
                             <h4>{{ expense.description }}</h4>
                             <div class="expense-meta">
@@ -127,8 +128,9 @@
                         </div>
                         <div class="expense-amount">
                             <span class="amount">€{{ "%.2f"|format(expense.amount) }}</span>
+                            <span class="click-indicator">👁️</span>
                         </div>
-                    </div>
+                    </a>
                 {% endfor %}
             </div>
         {% else %}
