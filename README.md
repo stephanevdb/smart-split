@@ -39,6 +39,7 @@ A modern Progressive Web App (PWA) for splitting expenses with friends and group
 ### 📱 Progressive Web App
 - Install on any device like a native app
 - Offline functionality with service worker
+- **Automatic cache clearing and refresh** every 24 hours for latest updates
 - Responsive design for mobile and desktop
 - **Collapsible interface sections** for optimized mobile experience (members, expenses)
 - Push notification support
@@ -190,6 +191,26 @@ The application will be available at:
 - `/groups/{id}/add_expense` - Add new expenses
 - `/groups/{id}/scan_receipt` - AI receipt scanning
 - `/settings` - User profile and bank details
+
+### 🔄 Auto-Refresh System
+Smart Split includes an intelligent auto-refresh system that ensures users always have the latest version:
+
+**How it works:**
+- **Automatic cache clearing** every 24 hours
+- **Periodic checks** during app usage (throttled to once per hour)
+- **Service worker updates** checked every minute
+- **Seamless user experience** with notification before refresh
+
+**Manual testing:**
+- Open browser developer console
+- Type `testCacheRefresh()` to manually trigger cache check
+- View console logs for cache status and timing information
+
+**Background behavior:**
+- Cache timestamps are stored locally
+- Old cache versions are automatically cleaned up
+- Users get notification when automatic refresh occurs
+- No data loss - only interface cache is refreshed
 
 ### API Endpoints
 - User authentication (login/register/logout)

@@ -6,11 +6,77 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js')
             .then((registration) => {
                 console.log('Service Worker registered successfully:', registration.scope);
+                
+                // Set up auto-refresh listeners
+                setupAutoRefresh(registration);
+                
+                // Check for updates periodically
+                setInterval(() => {
+                    registration.update();
+                }, 60000); // Check every minute
             })
             .catch((error) => {
                 console.log('Service Worker registration failed:', error);
             });
     });
+}
+
+// Auto-refresh functionality
+function setupAutoRefresh(registration) {
+    // Listen for messages from service worker
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'CACHE_CLEARED') {
+            console.log('Cache cleared automatically - refreshing page');
+            showNotification('App updated! Refreshing...', 'info');
+            
+            // Refresh the page after a short delay
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        }
+    });
+    
+    // Manual cache refresh function (can be called from UI)
+    window.refreshAppCache = async () => {
+        try {
+            const messageChannel = new MessageChannel();
+            
+            return new Promise((resolve) => {
+                messageChannel.port1.onmessage = (event) => {
+                    if (event.data && event.data.type === 'CACHE_REFRESH_RESULT') {
+                        if (event.data.refreshed) {
+                            showNotification('Cache cleared successfully!', 'success');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            showNotification('Cache is still fresh', 'info');
+                        }
+                        resolve(event.data.refreshed);
+                    }
+                };
+                
+                // Send message to service worker
+                if (registration.active) {
+                    registration.active.postMessage(
+                        { type: 'CHECK_CACHE_REFRESH' },
+                        [messageChannel.port2]
+                    );
+                }
+            });
+        } catch (error) {
+            console.error('Error refreshing cache:', error);
+            showNotification('Error refreshing cache', 'error');
+        }
+    };
+    
+    // Check cache status on page load
+    setTimeout(() => {
+        if (window.refreshAppCache) {
+            console.log('Checking cache status on startup...');
+            window.refreshAppCache();
+        }
+    }, 5000); // Wait 5 seconds after page load
 }
 
 // Install Prompt
@@ -124,6 +190,20 @@ function showNotification(message, type = 'info') {
 console.log('PWA initialized');
 console.log('Service Worker supported:', 'serviceWorker' in navigator);
 console.log('Currently online:', navigator.onLine);
+
+// Debug: Add global function for testing cache refresh
+if (typeof window !== 'undefined') {
+    window.testCacheRefresh = () => {
+        console.log('Testing cache refresh functionality...');
+        if (window.refreshAppCache) {
+            window.refreshAppCache();
+        } else {
+            console.log('Cache refresh not yet available - try again in a few seconds');
+        }
+    };
+    
+    console.log('🔧 Debug: Type "testCacheRefresh()" in console to test cache refresh');
+}
 
 // Theme color detection
 function updateThemeColor() {
