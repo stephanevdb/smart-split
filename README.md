@@ -40,6 +40,7 @@ A modern Progressive Web App (PWA) for splitting expenses with friends and group
 - Install on any device like a native app
 - Offline functionality with service worker
 - Responsive design for mobile and desktop
+- **Collapsible interface sections** for optimized mobile experience (members, expenses)
 - Push notification support
 
 ### 🏦 Settlement Features

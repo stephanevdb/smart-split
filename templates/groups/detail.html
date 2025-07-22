@@ -34,8 +34,11 @@
     
     <!-- Group Members -->
     <div class="group-members">
-        <h3>Members ({{ members|length }})</h3>
-        <div class="members-list">
+        <h3 class="members-header collapsible-header" onclick="toggleMembersSection(this)">
+            👥 Members ({{ members|length }})
+            <span class="toggle-indicator collapsed">▶</span>
+        </h3>
+        <div class="members-list collapsible-content collapsed">
             {% for member in members %}
                 <div class="member-card">
                     <div class="member-avatar">{{ member.username[0].upper() }}</div>
@@ -124,7 +127,8 @@
         {% if expenses %}
             <div class="expenses-list">
                 {% for expense in expenses %}
-                    <a href="{{ url_for('expense_detail', group_id=group.id, expense_id=expense.id) }}" class="expense-item clickable">
+                    <a href="{{ url_for('expense_detail', group_id=group.id, expense_id=expense.id) }}" 
+                       class="expense-item clickable {% if loop.index > 5 %}expense-item-hidden{% endif %}">
                         <div class="expense-info">
                             <h4>{{ expense.description }}</h4>
                             <div class="expense-meta">
@@ -139,6 +143,15 @@
                     </a>
                 {% endfor %}
             </div>
+            
+            {% if expenses|length > 5 %}
+                <div class="expenses-show-more">
+                    <button class="btn btn-secondary btn-small show-more-btn" onclick="toggleExpenses(this)">
+                        <span class="btn-text">Show {{ expenses|length - 5 }} More</span>
+                        <span class="btn-icon">▼</span>
+                    </button>
+                </div>
+            {% endif %}
         {% else %}
             <div class="empty-expenses">
                 <div class="empty-icon">💸</div>
@@ -344,6 +357,42 @@ function renderBalancesChart() {
     
     chartHTML += '</div>';
     chartContainer.innerHTML = chartHTML;
+}
+
+function toggleMembersSection(header) {
+    const content = header.nextElementSibling;
+    const indicator = header.querySelector('.toggle-indicator');
+    
+    if (content.classList.contains('collapsed')) {
+        // Expand
+        content.classList.remove('collapsed');
+        indicator.classList.remove('collapsed');
+    } else {
+        // Collapse
+        content.classList.add('collapsed');
+        indicator.classList.add('collapsed');
+    }
+}
+
+function toggleExpenses(button) {
+    const expensesList = document.querySelector('.expenses-list');
+    const buttonText = button.querySelector('.btn-text');
+    const buttonIcon = button.querySelector('.btn-icon');
+    const hiddenExpenses = document.querySelectorAll('.expense-item-hidden');
+    
+    if (expensesList.classList.contains('expanded')) {
+        // Collapse - hide extra expenses
+        expensesList.classList.remove('expanded');
+        button.classList.remove('expanded');
+        buttonText.textContent = `Show ${hiddenExpenses.length} More`;
+        buttonIcon.textContent = '▼';
+    } else {
+        // Expand - show all expenses
+        expensesList.classList.add('expanded');
+        button.classList.add('expanded');
+        buttonText.textContent = 'Show Less';
+        buttonIcon.textContent = '▲';
+    }
 }
 </script>
 {% endblock %} 
