@@ -6,8 +6,9 @@ const CACHE_VERSION = Date.now(); // Dynamic version based on timestamp
 const CACHE_NAME = `${CACHE_PREFIX}-v${CACHE_VERSION}`;
 const OFFLINE_URL = '/offline';
 
-// Auto-refresh configuration (24 hours in milliseconds)
-const CACHE_REFRESH_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+// Auto-refresh configuration - aggressive cache clearing
+const CACHE_REFRESH_INTERVAL = 60 * 60 * 1000; // 1 hour (reduced from 24 hours)
+const CACHE_ENTRY_MAX_AGE = 60 * 1000; // 1 minute max cache age
 const LAST_CACHE_CLEAR_KEY = 'lastCacheClear';
 
 // Files to cache for offline functionality
@@ -164,37 +165,54 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Handle other requests with cache-first strategy
+    // Handle other requests with network-first strategy (minimum cache TTL)
     event.respondWith(
-        caches.match(event.request)
-            .then((cachedResponse) => {
-                if (cachedResponse) {
-                    return cachedResponse;
+        fetch(event.request)
+            .then((response) => {
+                // Always try network first for fresh content
+                if (!response || response.status !== 200 || response.type !== 'basic') {
+                    throw new Error('Network response not ok');
                 }
 
-                return fetch(event.request)
-                    .then((response) => {
-                        // Don't cache if it's not a successful response
-                        if (!response || response.status !== 200 || response.type !== 'basic') {
-                            return response;
+                // Check cache control headers for TTL
+                const cacheControl = response.headers.get('cache-control');
+                const shouldCache = !cacheControl || !cacheControl.includes('no-store');
+
+                if (shouldCache) {
+                    // Clone the response for caching
+                    const responseToCache = response.clone();
+
+                    // Cache with minimal TTL - remove old entries quickly
+                    caches.open(CACHE_NAME)
+                        .then((cache) => {
+                            cache.put(event.request, responseToCache);
+                            
+                            // Clean up old cached entries after 1 minute for minimum TTL
+                            setTimeout(() => {
+                                cache.delete(event.request);
+                            }, 60 * 1000); // 1 minute
+                        });
+                }
+
+                return response;
+            })
+            .catch(() => {
+                // Network failed - fall back to cache as last resort
+                return caches.match(event.request)
+                    .then((cachedResponse) => {
+                        if (cachedResponse) {
+                            console.log('Using cached response for:', event.request.url);
+                            return cachedResponse;
                         }
-
-                        // Clone the response
-                        const responseToCache = response.clone();
-
-                        // Add to cache for future requests
-                        caches.open(CACHE_NAME)
-                            .then((cache) => {
-                                cache.put(event.request, responseToCache);
-                            });
-
-                        return response;
-                    })
-                    .catch(() => {
+                        
                         // If it's a request for an HTML page, return the offline page
-                        if (event.request.headers.get('accept').includes('text/html')) {
+                        if (event.request.headers.get('accept') && 
+                            event.request.headers.get('accept').includes('text/html')) {
                             return caches.match(OFFLINE_URL);
                         }
+                        
+                        // No cache available
+                        throw new Error('No cached response available');
                     });
             })
     );
@@ -269,16 +287,52 @@ self.addEventListener('message', async (event) => {
     }
 });
 
-// Periodic cache check during fetch events (throttled)
+// Periodic cache check during fetch events - aggressive checking
 let lastCacheCheck = 0;
-const CACHE_CHECK_THROTTLE = 60 * 60 * 1000; // Check at most once per hour
+let lastCacheCleanup = 0;
+const CACHE_CHECK_THROTTLE = 5 * 60 * 1000; // Check every 5 minutes (reduced from 1 hour)
+const CACHE_CLEANUP_THROTTLE = 60 * 1000; // Cleanup every minute
+
+async function cleanupStaleCache() {
+    try {
+        const cache = await caches.open(CACHE_NAME);
+        const requests = await cache.keys();
+        
+        const now = Date.now();
+        let cleanedCount = 0;
+        
+        for (const request of requests) {
+            // Remove entries that are part of old cache versions or have cache-busting params
+            if (request.url.includes('_cache_ts=') || 
+                request.url.includes('v=') || 
+                request.url.includes('?t=')) {
+                await cache.delete(request);
+                cleanedCount++;
+            }
+        }
+        
+        if (cleanedCount > 0) {
+            console.log(`Cleaned up ${cleanedCount} stale cache entries`);
+        }
+    } catch (error) {
+        console.error('Error cleaning stale cache:', error);
+    }
+}
 
 async function periodicCacheCheck() {
     const now = Date.now();
+    
+    // More frequent cache refresh checks
     if (now - lastCacheCheck > CACHE_CHECK_THROTTLE) {
         lastCacheCheck = now;
         console.log('Performing periodic cache check');
         await performAutoRefresh();
+    }
+    
+    // Aggressive stale cache cleanup
+    if (now - lastCacheCleanup > CACHE_CLEANUP_THROTTLE) {
+        lastCacheCleanup = now;
+        await cleanupStaleCache();
     }
 }
 
@@ -296,15 +350,51 @@ self.addEventListener('message', async (event) => {
     }
 });
 
-// Periodic cache check during fetch events (throttled)
+// Periodic cache check during fetch events - aggressive checking
 let lastCacheCheck = 0;
-const CACHE_CHECK_THROTTLE = 60 * 60 * 1000; // Check at most once per hour
+let lastCacheCleanup = 0;
+const CACHE_CHECK_THROTTLE = 5 * 60 * 1000; // Check every 5 minutes (reduced from 1 hour)
+const CACHE_CLEANUP_THROTTLE = 60 * 1000; // Cleanup every minute
+
+async function cleanupStaleCache() {
+    try {
+        const cache = await caches.open(CACHE_NAME);
+        const requests = await cache.keys();
+        
+        const now = Date.now();
+        let cleanedCount = 0;
+        
+        for (const request of requests) {
+            // Remove entries that are part of old cache versions
+            if (request.url.includes('_cache_ts=') || 
+                request.url.includes('v=') || 
+                request.url.includes('?t=')) {
+                await cache.delete(request);
+                cleanedCount++;
+            }
+        }
+        
+        if (cleanedCount > 0) {
+            console.log(`Cleaned up ${cleanedCount} stale cache entries`);
+        }
+    } catch (error) {
+        console.error('Error cleaning stale cache:', error);
+    }
+}
 
 async function periodicCacheCheck() {
     const now = Date.now();
+    
+    // More frequent cache refresh checks
     if (now - lastCacheCheck > CACHE_CHECK_THROTTLE) {
         lastCacheCheck = now;
         console.log('Performing periodic cache check');
         await performAutoRefresh();
+    }
+    
+    // Aggressive stale cache cleanup
+    if (now - lastCacheCleanup > CACHE_CLEANUP_THROTTLE) {
+        lastCacheCleanup = now;
+        await cleanupStaleCache();
     }
 } 

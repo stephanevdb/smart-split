@@ -28,6 +28,40 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
 app.config['DATABASE'] = os.environ.get('DATABASE', 'splitwise.db')
+
+# Set minimum cache TTL for all responses
+@app.after_request
+def add_cache_headers(response):
+    """Add minimal cache control headers to all responses"""
+    
+    # Static resources (CSS, JS, images) - very short cache
+    if request.endpoint == 'static' or request.path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'public, max-age=60, must-revalidate'  # 1 minute
+        response.headers['Expires'] = '0'
+    
+    # Service worker - no cache
+    elif request.path.endswith('sw.js'):
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    
+    # API endpoints and dynamic content - no cache
+    elif request.path.startswith('/api/') or request.method == 'POST':
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    
+    # HTML pages - minimal cache
+    else:
+        response.headers['Cache-Control'] = 'no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    
+    # Add ETag for better cache validation
+    if not response.headers.get('ETag'):
+        response.add_etag()
+    
+    return response
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 7 * 1024 * 1024  # 7MB max file size
 
@@ -1938,7 +1972,14 @@ def manifest():
 
 @app.route('/sw.js')
 def service_worker():
-    return app.send_static_file('sw.js')
+    response = app.send_static_file('sw.js')
+    # Force no cache for service worker - critical for updates
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    response.headers['Last-Modified'] = ''
+    response.headers['ETag'] = ''
+    return response
 
 @app.route('/offline')
 def offline():
