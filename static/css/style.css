@@ -3346,9 +3346,30 @@ body.dark-mode .invite-actions {
 }
 
 .split-checkbox input[type="checkbox"] {
-    position: absolute;
-    opacity: 0;
+    /* Show basic checkboxes when custom styling is not available */
+    opacity: 1 !important;
+    position: relative;
+    margin-right: 0.5rem;
     cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: #2196F3;
+    display: inline-block !important;
+    visibility: visible !important;
+}
+
+/* Fallback rule to ensure all form checkboxes are visible */
+.form-card input[type="checkbox"],
+.expense-form input[type="checkbox"],
+input[name="split_among"] {
+    opacity: 1 !important;
+    display: inline-block !important;
+    visibility: visible !important;
+    position: relative !important;
+    width: 16px !important;
+    height: 16px !important;
+    margin-right: 0.5rem !important;
+    accent-color: #2196F3 !important;
 }
 
 .checkbox-custom {
@@ -3400,9 +3421,16 @@ body.dark-mode .invite-actions {
 }
 
 .member-checkbox input[type="checkbox"] {
-    position: absolute;
-    opacity: 0;
+    /* Show basic checkboxes when custom styling is not available */
+    opacity: 1 !important;
+    position: relative;
+    margin-right: 0.5rem;
     cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: #2196F3;
+    display: inline-block !important;
+    visibility: visible !important;
 }
 
 .member-checkbox input[type="checkbox"]:checked + .checkbox-custom {

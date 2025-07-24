@@ -134,6 +134,15 @@ document.addEventListener('DOMContentLoaded', function() {
         paidBySelect.value = "{{ current_user.id }}";
     }
     
+    // Set default split type to equal if none selected
+    const checkedSplitType = document.querySelector('input[name="split_type"]:checked');
+    if (!checkedSplitType) {
+        const equalSplitRadio = document.querySelector('input[name="split_type"][value="equal"]');
+        if (equalSplitRadio) {
+            equalSplitRadio.checked = true;
+        }
+    }
+    
     // Select all members by default
     selectAllMembers();
     
@@ -158,10 +167,28 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize display
     handleSplitTypeChange();
     updateDisplay();
+    
+    // Debug info
+    console.log('Add expense form initialized successfully');
+    console.log('Split type radios found:', splitTypeRadios.length);
+    console.log('Split checkboxes found:', splitCheckboxes.length);
+    
+    // Debug checkbox visibility
+    splitCheckboxes.forEach((checkbox, index) => {
+        const styles = window.getComputedStyle(checkbox);
+        console.log(`Checkbox ${index}:`, {
+            opacity: styles.opacity,
+            display: styles.display,
+            visibility: styles.visibility,
+            name: checkbox.name,
+            value: checkbox.value
+        });
+    });
 });
 
 function selectAllMembers() {
     const checkboxes = document.querySelectorAll('input[name="split_among"]');
+    console.log('Selecting all members, found', checkboxes.length, 'checkboxes');
     checkboxes.forEach(checkbox => {
         checkbox.checked = true;
     });
@@ -177,7 +204,8 @@ function clearAllMembers() {
 }
 
 function handleSplitTypeChange() {
-    const splitType = document.querySelector('input[name="split_type"]:checked').value;
+    const splitTypeElement = document.querySelector('input[name="split_type"]:checked');
+    const splitType = splitTypeElement ? splitTypeElement.value : 'equal';
     const customAmountsSection = document.getElementById('customAmountsSection');
     const splitPreview = document.getElementById('splitPreview');
     
@@ -284,9 +312,12 @@ function updateCustomAmountsSummary() {
 }
 
 function updateSplitPreview() {
-    const amount = parseFloat(document.getElementById('amount').value) || 0;
+    const amountElement = document.getElementById('amount');
+    const amount = amountElement ? (parseFloat(amountElement.value) || 0) : 0;
     const selectedMembers = document.querySelectorAll('input[name="split_among"]:checked');
     const previewContainer = document.getElementById('splitPreview');
+    
+    if (!previewContainer) return; // Safety check
     
     if (amount > 0 && selectedMembers.length > 0) {
         const shareAmount = amount / selectedMembers.length;
@@ -299,7 +330,8 @@ function updateSplitPreview() {
         `;
         
         selectedMembers.forEach(checkbox => {
-            const memberName = checkbox.nextElementSibling.textContent.trim();
+            const memberLabel = checkbox.nextElementSibling;
+            const memberName = memberLabel ? memberLabel.textContent.trim() : 'Unknown Member';
             previewHTML += `<span class="split-item">${memberName}: €${shareAmount.toFixed(2)}</span>`;
         });
         
@@ -309,6 +341,13 @@ function updateSplitPreview() {
         `;
         
         previewContainer.innerHTML = previewHTML;
+        previewContainer.style.display = 'block';
+    } else if (selectedMembers.length === 0 && amount > 0) {
+        previewContainer.innerHTML = `
+            <div class="split-preview-content">
+                <p class="warning">Please select at least one person to split the expense with.</p>
+            </div>
+        `;
         previewContainer.style.display = 'block';
     } else {
         previewContainer.style.display = 'none';
