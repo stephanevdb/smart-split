@@ -12,6 +12,7 @@
         
         <form method="POST" id="itemSelectionForm">
             <input type="hidden" id="confirmedPayments" name="confirmed_payments" value="">
+            <input type="hidden" id="guestUsers" name="guest_users" value="">
             <div class="receipt-items-container">
                 <div class="receipt-summary">
                     <h3>📋 Receipt Items</h3>
@@ -28,6 +29,18 @@
                             </option>
                         {% endfor %}
                     </select>
+                </div>
+                
+                <!-- Guest Users Section -->
+                <div class="guest-users-section">
+                    <div class="guest-header">
+                        <h4>👥 Add Guest Users</h4>
+                        <p class="guest-description">Add temporary guests for this receipt only</p>
+                        <button type="button" class="btn btn-small btn-secondary" onclick="addGuestUser()">+ Add Guest</button>
+                    </div>
+                    <div class="guest-users-list" id="guestUsersList">
+                        <!-- Guest users will be added here dynamically -->
+                    </div>
                 </div>
                 
                 <div class="items-list">
@@ -52,7 +65,7 @@
                                         <label class="split-checkbox">
                                             <input type="checkbox" 
                                                    name="item_{{ loop.index0 }}_split" 
-                                                   onchange="toggleSplitMode({{ loop.index0 }})">
+                                                   data-item-index="{{ loop.index0 }}">
                                             <span class="checkbox-custom"></span>
                                             Split
                                         </label>
@@ -64,7 +77,8 @@
                                         {% for member in members %}
                                             <label class="member-checkbox">
                                                 <input type="checkbox" 
-                                                       name="item_{{ loop.index0 }}_users" 
+                                                       name="item_{{ loop.index0 }}_user_{{ member['id'] }}" 
+                                                       id="item_{{ loop.index0 }}_user_{{ member['id'] }}" 
                                                        value="{{ member['id'] }}">
                                                 <span class="checkbox-custom"></span>
                                                 <span class="member-name">{{ member['username'] }}</span>
@@ -130,15 +144,59 @@
 <script>
 let receiptItems = [];
 let members = [];
+let guestUsers = [];
+let guestIdCounter = 1000; // Start with high number to avoid conflicts with member IDs
 
 document.addEventListener('DOMContentLoaded', function() {
     receiptItems = JSON.parse(document.getElementById('receipt-items-data').textContent);
     members = JSON.parse(document.getElementById('members-data').textContent);
     
+    console.log('=== Receipt Items Page Initialized ===');
+    console.log('Receipt items:', receiptItems.length);
+    console.log('Members:', members.length);
+    
+    // Debug all checkboxes on page load
+    const allUserCheckboxes = document.querySelectorAll('input[name*="_users"]');
+    const allSplitCheckboxes = document.querySelectorAll('input[name*="_split"]');
+    console.log(`Found ${allUserCheckboxes.length} user checkboxes and ${allSplitCheckboxes.length} split checkboxes`);
+    
+    allUserCheckboxes.forEach((cb, i) => {
+        const styles = window.getComputedStyle(cb);
+        console.log(`User checkbox ${i}: opacity=${styles.opacity}, visible=${styles.visibility}, display=${styles.display}`);
+    });
+    
     // Add event listeners to all split checkboxes for real-time updates
     document.querySelectorAll('input[name*="_users"]').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
-            updateItemSummary();
+            try {
+                const itemIndex = this.name.match(/item_(\d+)_users/)[1];
+                const userName = members.find(m => m.id == this.value)?.username || 'Unknown';
+                console.log(`🔄 User checkbox clicked: ${this.name} = ${this.checked} (${userName} for item ${itemIndex})`);
+                
+                // Count checked boxes for this item immediately
+                const checkedForThisItem = document.querySelectorAll(`input[name="item_${itemIndex}_users"]:checked`).length;
+                console.log(`   Now ${checkedForThisItem} people selected for item ${itemIndex}`);
+                
+                updateItemSummary();
+            } catch (error) {
+                console.error('Error in user checkbox change handler:', error);
+            }
+        });
+    });
+    
+    // Add event listeners to split mode checkboxes
+    document.querySelectorAll('input[name*="_split"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            try {
+                const itemIndex = this.dataset.itemIndex || this.name.match(/item_(\d+)_split/)[1];
+                console.log(`🔄 Split mode checkbox clicked: ${this.name} = ${this.checked} for item ${itemIndex}`);
+                
+                // Call the toggle function AND update summary
+                toggleSplitMode(parseInt(itemIndex));
+                updateItemSummary();
+            } catch (error) {
+                console.error('Error in split checkbox change handler:', error);
+            }
         });
     });
     
@@ -158,13 +216,41 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     updateItemSummary();
+    
+    // Debug function for testing calculation manually
+    window.testSplitCalculation = function(itemPrice, numberOfPeople) {
+        const splitAmount = Math.round((itemPrice / numberOfPeople) * 100) / 100;
+        console.log(`🧮 Test: €${itemPrice} ÷ ${numberOfPeople} people = €${splitAmount} each`);
+        return splitAmount;
+    };
+    
+    console.log('🧪 Debug function available: testSplitCalculation(8, 2) should return 4');
+    
+    // Add manual update function for debugging
+    window.forceUpdate = function() {
+        console.log('🔧 Manually triggering updateItemSummary()');
+        updateItemSummary();
+    };
+    
+    window.debugCheckboxes = function(itemIndex) {
+        const checkboxes = document.querySelectorAll(`input[name="item_${itemIndex}_users"]`);
+        const checked = document.querySelectorAll(`input[name="item_${itemIndex}_users"]:checked`);
+        console.log(`Debug item ${itemIndex}: ${checked.length}/${checkboxes.length} checkboxes checked`);
+        checked.forEach((cb, i) => {
+            const user = members.find(m => m.id == cb.value)?.username || 'Unknown';
+            console.log(`  Checked ${i}: ${user} (id: ${cb.value})`);
+        });
+        return { total: checkboxes.length, checked: checked.length };
+    };
+    
+    console.log('🧪 Additional debug functions: forceUpdate(), debugCheckboxes(itemIndex)');
 });
 
 function toggleSplitMode(itemIndex) {
     const splitCheckbox = document.querySelector(`input[name="item_${itemIndex}_split"]`);
     const dropdown = document.querySelector(`select[name="item_${itemIndex}_user"]`);
     const splitMembers = document.getElementById(`split-members-${itemIndex}`);
-    const checkboxes = document.querySelectorAll(`input[name="item_${itemIndex}_users"]`);
+    const checkboxes = document.querySelectorAll(`input[name^="item_${itemIndex}_user_"]`);
     
     if (splitCheckbox && splitCheckbox.checked) {
         // Enable split mode
@@ -183,39 +269,86 @@ function toggleSplitMode(itemIndex) {
         if (splitMembers) {
             splitMembers.style.display = 'none';
         }
-        // Clear all checkboxes
+        // Clear all checkboxes for this item only
         checkboxes.forEach(cb => {
             if (cb) cb.checked = false;
         });
     }
-    
+    // Re-attach event listeners to checkboxes for this item
+    checkboxes.forEach(cb => {
+        cb.removeEventListener('change', cb._splitListener || (()=>{}));
+        cb._splitListener = function() {
+            try {
+                const userName = members.find(m => m.id == this.value)?.username || 'Unknown';
+                console.log(`🔄 User checkbox clicked: ${this.name} = ${this.checked} (${userName} for item ${itemIndex})`);
+                updateItemSummary();
+            } catch (error) {
+                console.error('Error in user checkbox change handler:', error);
+            }
+        };
+        cb.addEventListener('change', cb._splitListener);
+    });
     // Force immediate update
     updateItemSummary();
 }
 
 function updateItemSummary() {
-    const submitBtn = document.getElementById('submitBtn');
-    const summaryContent = document.querySelector('.summary-content');
-    const billPayerDropdown = document.getElementById('billPayer');
-    
-    let totalSelected = 0;
-    let userTotals = {};
-    let hasSelections = false;
-    let hasBillPayer = billPayerDropdown && billPayerDropdown.value !== '';
-    
-    // Initialize user totals
-    members.forEach(member => {
-        userTotals[member.id] = { name: member.username, amount: 0 };
-    });
+    try {
+        console.log('🔄 updateItemSummary() called');
+        
+        const submitBtn = document.getElementById('submitBtn');
+        const summaryContent = document.querySelector('.summary-content');
+        const billPayerDropdown = document.getElementById('billPayer');
+        
+        if (!submitBtn || !summaryContent || !billPayerDropdown) {
+            console.error('Missing required elements:', { submitBtn, summaryContent, billPayerDropdown });
+            return;
+        }
+        
+        let totalSelected = 0;
+        let userTotals = {};
+        let hasSelections = false;
+        let hasBillPayer = billPayerDropdown && billPayerDropdown.value !== '';
+        
+        // Initialize user totals for members and guests
+        members.forEach(member => {
+            userTotals[member.id] = { name: member.username, amount: 0, isGuest: false };
+        });
+        
+        guestUsers.forEach(guest => {
+            userTotals[guest.id] = { name: guest.name, amount: 0, isGuest: true };
+        });
+        
+        console.log('=== Receipt Items Calculation Debug ===');
+        console.log(`Bill payer selected: ${hasBillPayer} (${billPayerDropdown.value})`);
+        console.log(`Processing ${receiptItems.length} items`);
     
     // Calculate totals for each item
     receiptItems.forEach((item, index) => {
         const splitCheckbox = document.querySelector(`input[name="item_${index}_split"]`);
         const dropdown = document.querySelector(`select[name="item_${index}_user"]`);
-        const checkboxes = document.querySelectorAll(`input[name="item_${index}_users"]:checked`);
+        const allCheckboxes = document.querySelectorAll(`input[name^="item_${index}_user_"]`);
+        const checkboxes = document.querySelectorAll(`input[name^="item_${index}_user_"]:checked`);
         const splitInfo = document.getElementById(`item-${index}-split`);
         
         const itemPrice = item.price || 0;
+        
+        console.log(`Item ${index} (${item.name}): €${itemPrice}`);
+        console.log(`  - Split mode: ${splitCheckbox?.checked || false}`);
+        console.log(`  - Total checkboxes: ${allCheckboxes.length}`);
+        console.log(`  - Checked checkboxes: ${checkboxes.length}`);
+        console.log(`  - Dropdown value: ${dropdown?.value || 'none'}`);
+        
+        // Debug checkbox visibility and values
+        allCheckboxes.forEach((cb, i) => {
+            const styles = window.getComputedStyle(cb);
+            console.log(`    Checkbox ${i}: name=${cb.name}, value=${cb.value}, checked=${cb.checked}, opacity=${styles.opacity}, display=${styles.display}`);
+        });
+        
+        // Debug checked checkboxes specifically
+        checkboxes.forEach((cb, i) => {
+            console.log(`    CHECKED Checkbox ${i}: name=${cb.name}, value=${cb.value}, user=${members.find(m => m.id == cb.value)?.username}`);
+        });
         
         let selectedUsers = [];
         let selectedNames = [];
@@ -224,18 +357,51 @@ function updateItemSummary() {
         const isInSplitMode = splitCheckbox && splitCheckbox.checked;
         
         if (isInSplitMode) {
-            // Split mode - use checkboxes only
+            // Split mode - only count explicitly selected people via checkboxes
             if (checkboxes.length > 0) {
                 hasSelections = true;
+                
+                // Get bill payer for debt calculation
+                const billPayerId = billPayerDropdown ? parseInt(billPayerDropdown.value) : null;
+                const billPayerName = billPayerId ? members.find(m => m.id === billPayerId)?.username : null;
+                
+                // Only count people who are explicitly checked
                 const numberOfPeople = checkboxes.length;
                 const splitAmount = Math.round((itemPrice / numberOfPeople) * 100) / 100;
+                
+                // Debug logging for split calculation
+                console.log(`Item ${index} (€${itemPrice}): Split between ${numberOfPeople} people = €${splitAmount} each`);
+                console.log(`  - Bill payer: ${billPayerId} (${billPayerName})`);
+                console.log(`  - Selected people: ${numberOfPeople}`);
+                
+                const selectedNames = [];
                 
                 checkboxes.forEach(checkbox => {
                     const userId = parseInt(checkbox.value);
                     selectedUsers.push(userId);
-                    userTotals[userId].amount += splitAmount;
-                    const memberName = members.find(m => m.id === userId)?.username || 'Unknown';
-                    selectedNames.push(memberName);
+                    
+                    // Find user name from members or guests
+                    let userName = 'Unknown';
+                    const member = members.find(m => m.id === userId);
+                    const guest = guestUsers.find(g => g.id === userId);
+                    
+                    if (member) {
+                        userName = member.username;
+                    } else if (guest) {
+                        userName = `${guest.name} (Guest)`;
+                    }
+                    
+                    selectedNames.push(userName);
+                    
+                    // Add debt for each person (including bill payer if they're selected)
+                    if (userId !== billPayerId) {
+                        // Other people owe money to the bill payer
+                        userTotals[userId].amount += splitAmount;
+                        console.log(`    ${userName} owes €${splitAmount} to bill payer`);
+                    } else {
+                        // Bill payer selected themselves - they don't owe money to themselves
+                        console.log(`    ${userName} is the bill payer - no debt to self`);
+                    }
                 });
                 
                 if (splitInfo) {
@@ -257,7 +423,17 @@ function updateItemSummary() {
             const userId = parseInt(dropdown.value);
             selectedUsers.push(userId);
             userTotals[userId].amount += itemPrice;
-            const userName = members.find(m => m.id === userId)?.username || 'Unknown';
+            
+            // Find user name from members or guests
+            let userName = 'Unknown';
+            const member = members.find(m => m.id === userId);
+            const guest = guestUsers.find(g => g.id === userId);
+            
+            if (member) {
+                userName = member.username;
+            } else if (guest) {
+                userName = `${guest.name} (Guest)`;
+            }
             
             if (splitInfo) {
                 splitInfo.innerHTML = `
@@ -320,6 +496,10 @@ function updateItemSummary() {
         }
         summaryContent.innerHTML = message;
         submitBtn.disabled = true;
+    }
+    } catch (error) {
+        console.error('Error in updateItemSummary:', error);
+        console.error('Stack trace:', error.stack);
     }
 }
 
@@ -470,5 +650,144 @@ document.addEventListener('click', function(event) {
         closeQRModal();
     }
 });
+
+// Guest user management functions
+function addGuestUser() {
+    const guestName = prompt('Enter guest name:');
+    if (!guestName || guestName.trim() === '') {
+        return;
+    }
+    
+    const guestId = guestIdCounter++;
+    const guest = {
+        id: guestId,
+        name: guestName.trim()
+    };
+    
+    guestUsers.push(guest);
+    updateGuestUsersList();
+    updateGuestUsersData();
+    updateAllItemDropdowns();
+    updateAllSplitSections();
+    updateItemSummary();
+}
+
+function removeGuestUser(guestId) {
+    guestUsers = guestUsers.filter(guest => guest.id !== guestId);
+    updateGuestUsersList();
+    updateGuestUsersData();
+    updateAllItemDropdowns();
+    updateAllSplitSections();
+    updateItemSummary();
+}
+
+function updateGuestUsersList() {
+    const guestUsersList = document.getElementById('guestUsersList');
+    if (!guestUsersList) return;
+    
+    if (guestUsers.length === 0) {
+        guestUsersList.innerHTML = '';
+        return;
+    }
+    
+    let guestHTML = '';
+    guestUsers.forEach(guest => {
+        guestHTML += `
+            <div class="member-checkbox guest-checkbox">
+                <span class="guest-info">${guest.name} (Guest)</span>
+                <button type="button" class="btn btn-small btn-danger guest-remove" onclick="removeGuestUser(${guest.id})">×</button>
+            </div>
+        `;
+    });
+    
+    guestUsersList.innerHTML = guestHTML;
+}
+
+function updateGuestUsersData() {
+    const guestUsersField = document.getElementById('guestUsers');
+    if (guestUsersField) {
+        guestUsersField.value = JSON.stringify(guestUsers);
+    }
+}
+
+function updateAllItemDropdowns() {
+    // Update all item selection dropdowns to include guests
+    receiptItems.forEach((item, index) => {
+        const dropdown = document.querySelector(`select[name="item_${index}_user"]`);
+        if (dropdown) {
+            const currentValue = dropdown.value;
+            
+            // Clear current options except the first one
+            while (dropdown.children.length > 1) {
+                dropdown.removeChild(dropdown.lastChild);
+            }
+            
+            // Add member options
+            members.forEach(member => {
+                const option = document.createElement('option');
+                option.value = member.id;
+                option.textContent = member.username;
+                dropdown.appendChild(option);
+            });
+            
+            // Add guest options
+            guestUsers.forEach(guest => {
+                const option = document.createElement('option');
+                option.value = guest.id;
+                option.textContent = `${guest.name} (Guest)`;
+                dropdown.appendChild(option);
+            });
+            
+            // Restore previous selection if it still exists
+            if (currentValue) {
+                dropdown.value = currentValue;
+            }
+        }
+    });
+}
+
+function updateAllSplitSections() {
+    // Update all split sections to include guests
+    receiptItems.forEach((item, index) => {
+        const splitMembers = document.getElementById(`split-members-${index}`);
+        if (splitMembers) {
+            const splitCheckboxes = splitMembers.querySelector('.split-checkboxes');
+            if (splitCheckboxes) {
+                // Clear existing guest checkboxes
+                const existingGuestCheckboxes = splitCheckboxes.querySelectorAll('label[data-guest-id]');
+                existingGuestCheckboxes.forEach(checkbox => checkbox.remove());
+                
+                // Add guest checkboxes
+                guestUsers.forEach(guest => {
+                    const label = document.createElement('label');
+                    label.className = 'member-checkbox';
+                    label.setAttribute('data-guest-id', guest.id);
+                    
+                    label.innerHTML = `
+                        <input type="checkbox" 
+                               name="item_${index}_user_${guest.id}" 
+                               id="item_${index}_user_${guest.id}" 
+                               value="${guest.id}">
+                        <span class="checkbox-custom"></span>
+                        <span class="member-name">${guest.name} (Guest)</span>
+                    `;
+                    
+                    // Add event listener
+                    const checkbox = label.querySelector('input');
+                    checkbox.addEventListener('change', function() {
+                        try {
+                            console.log(`🔄 Guest checkbox clicked: ${this.name} = ${this.checked} (${guest.name} for item ${index})`);
+                            updateItemSummary();
+                        } catch (error) {
+                            console.error('Error in guest checkbox change handler:', error);
+                        }
+                    });
+                    
+                    splitCheckboxes.appendChild(label);
+                });
+            }
+        }
+    });
+}
 </script>
 {% endblock %} 
