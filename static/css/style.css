@@ -3571,6 +3571,15 @@ input[name*="_split"] {
     padding-left: var(--space-3);
 }
 
+.item-info-display {
+    margin-top: var(--space-2);
+    padding: var(--space-2);
+    background: var(--gray-50);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    color: var(--gray-600);
+}
+
 .item-split-info {
     padding: 0.5rem;
     background: #f8f9fa;
