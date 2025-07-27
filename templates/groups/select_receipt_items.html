@@ -512,9 +512,9 @@ function updateGuestUsersList() {
     let guestHTML = '';
     guestUsers.forEach(guest => {
         guestHTML += `
-            <div class="member-checkbox guest-checkbox">
-                <span class="guest-info">${guest.name} (Guest)</span>
-                <button type="button" class="btn btn-small btn-danger guest-remove" onclick="removeGuestUser(${guest.id})">×</button>
+            <div class="guest-pill">
+                <span class="guest-name">${guest.name}</span>
+                <button type="button" class="guest-remove" onclick="removeGuestUser(${guest.id})">×</button>
             </div>
         `;
     });

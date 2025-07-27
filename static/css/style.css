@@ -3460,6 +3460,7 @@ input[name*="_split"] {
 /* Guest Users Styles */
 .guest-users-section {
     margin-top: var(--space-6);
+    margin-bottom: var(--space-8);
     padding-top: var(--space-4);
     border-top: 1px solid var(--gray-200);
 }
@@ -3483,53 +3484,60 @@ input[name*="_split"] {
 
 .guest-users-list {
     margin-top: var(--space-3);
-}
-
-.guest-checkbox {
     display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.guest-pill {
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    padding: var(--space-3);
-    background: var(--gray-50);
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-md);
-    margin-bottom: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: linear-gradient(135deg, var(--primary-100), var(--primary-50));
+    border: 1px solid var(--primary-200);
+    border-radius: var(--radius-full);
+    margin: 0;
+    transition: all var(--transition-fast);
+    box-shadow: var(--shadow-sm);
+    gap: var(--space-2);
 }
 
-.guest-checkbox input[type="checkbox"] {
-    opacity: 1 !important;
-    position: relative;
-    margin-right: var(--space-2);
-    cursor: pointer;
-    width: 16px;
-    height: 16px;
-    accent-color: var(--primary-500);
-    display: inline-block !important;
-    visibility: visible !important;
+.guest-pill:hover {
+    background: linear-gradient(135deg, var(--primary-200), var(--primary-100));
+    border-color: var(--primary-300);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
 }
 
-.guest-checkbox label {
-    flex: 1;
-    cursor: pointer;
-    color: var(--gray-700);
+.guest-name {
+    color: var(--primary-700);
     font-size: 0.875rem;
     font-weight: var(--font-weight-medium);
+    line-height: 1;
+    white-space: nowrap;
 }
 
 .guest-remove {
-    margin-left: var(--space-2);
-    padding: var(--space-1) var(--space-2);
+    padding: 0;
     background: var(--error-500);
     color: white;
     border: none;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-full);
     cursor: pointer;
     font-size: 0.75rem;
-    transition: background var(--transition-fast);
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+    line-height: 1;
+    flex-shrink: 0;
 }
 
 .guest-remove:hover {
     background: #dc2626;
+    transform: scale(1.1);
 }
 
 .btn-danger {
@@ -3543,12 +3551,7 @@ input[name*="_split"] {
     border-color: #dc2626;
 }
 
-.guest-info {
-    flex: 1;
-    color: var(--gray-700);
-    font-size: 0.875rem;
-    font-weight: var(--font-weight-medium);
-}
+
 
 .guest-payments-section {
     margin-top: var(--space-6);
