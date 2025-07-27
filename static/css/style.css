@@ -3550,6 +3550,27 @@ input[name*="_split"] {
     font-weight: var(--font-weight-medium);
 }
 
+.guest-payments-section {
+    margin-top: var(--space-6);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--gray-200);
+}
+
+.guest-payments-title {
+    margin: 0 0 var(--space-3) 0;
+    color: var(--gray-600);
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.guest-total {
+    opacity: 0.8;
+    border-left: 3px solid var(--gray-300);
+    padding-left: var(--space-3);
+}
+
 .item-split-info {
     padding: 0.5rem;
     background: #f8f9fa;

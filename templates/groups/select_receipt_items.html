@@ -365,50 +365,56 @@ function updateItemSummary() {
                 const billPayerId = billPayerDropdown ? parseInt(billPayerDropdown.value) : null;
                 const billPayerName = billPayerId ? members.find(m => m.id === billPayerId)?.username : null;
                 
-                // Only count people who are explicitly checked
-                const numberOfPeople = checkboxes.length;
-                const splitAmount = Math.round((itemPrice / numberOfPeople) * 100) / 100;
-                
-                // Debug logging for split calculation
-                console.log(`Item ${index} (€${itemPrice}): Split between ${numberOfPeople} people = €${splitAmount} each`);
-                console.log(`  - Bill payer: ${billPayerId} (${billPayerName})`);
-                console.log(`  - Selected people: ${numberOfPeople}`);
-                
+                // Separate members and guests
+                const memberSelections = [];
+                const guestSelections = [];
                 const selectedNames = [];
                 
                 checkboxes.forEach(checkbox => {
                     const userId = parseInt(checkbox.value);
-                    selectedUsers.push(userId);
-                    
-                    // Find user name from members or guests
-                    let userName = 'Unknown';
                     const member = members.find(m => m.id === userId);
                     const guest = guestUsers.find(g => g.id === userId);
                     
                     if (member) {
-                        userName = member.username;
+                        memberSelections.push(userId);
+                        selectedNames.push(member.username);
                     } else if (guest) {
-                        userName = `${guest.name} (Guest)`;
+                        guestSelections.push({ id: userId, name: guest.name });
+                        selectedNames.push(`${guest.name} (Guest)`);
                     }
-                    
-                    selectedNames.push(userName);
-                    
-                    // Add debt for each person (including bill payer if they're selected)
+                });
+                
+                // Calculate splits - guests get EPC codes, members get debt tracking
+                const totalPeople = checkboxes.length;
+                const splitAmount = Math.round((itemPrice / totalPeople) * 100) / 100;
+                
+                console.log(`Item ${index} (€${itemPrice}): Split between ${totalPeople} people = €${splitAmount} each`);
+                console.log(`  - Members: ${memberSelections.length}, Guests: ${guestSelections.length}`);
+                
+                // Handle member debts (ignore guests for debt calculation)
+                memberSelections.forEach(userId => {
+                    const member = members.find(m => m.id === userId);
                     if (userId !== billPayerId) {
-                        // Other people owe money to the bill payer
+                        // Other members owe money to the bill payer
                         userTotals[userId].amount += splitAmount;
-                        console.log(`    ${userName} owes €${splitAmount} to bill payer`);
+                        console.log(`    ${member.username} owes €${splitAmount} to bill payer`);
                     } else {
                         // Bill payer selected themselves - they don't owe money to themselves
-                        console.log(`    ${userName} is the bill payer - no debt to self`);
+                        console.log(`    ${member.username} is the bill payer - no debt to self`);
                     }
+                });
+                
+                // Handle guest amounts (for EPC codes only)
+                guestSelections.forEach(guest => {
+                    userTotals[guest.id].amount += splitAmount;
+                    console.log(`    ${guest.name} (Guest) gets €${splitAmount} for EPC code only`);
                 });
                 
                 if (splitInfo) {
                     splitInfo.innerHTML = `
                         <span class="split-text">
                             Split between ${selectedNames.join(', ')} • €${splitAmount.toFixed(2)} each
-                            <small>(€${itemPrice.toFixed(2)} ÷ ${numberOfPeople} people)</small>
+                            <small>(€${itemPrice.toFixed(2)} ÷ ${totalPeople} people)</small>
                         </span>
                     `;
                 }
@@ -422,7 +428,6 @@ function updateItemSummary() {
             hasSelections = true;
             const userId = parseInt(dropdown.value);
             selectedUsers.push(userId);
-            userTotals[userId].amount += itemPrice;
             
             // Find user name from members or guests
             let userName = 'Unknown';
@@ -431,8 +436,19 @@ function updateItemSummary() {
             
             if (member) {
                 userName = member.username;
+                // Members: add to debt tracking (ignore if they're the bill payer)
+                const billPayerId = billPayerDropdown ? parseInt(billPayerDropdown.value) : null;
+                if (userId !== billPayerId) {
+                    userTotals[userId].amount += itemPrice;
+                    console.log(`    ${userName} owes €${itemPrice} for individual item`);
+                } else {
+                    console.log(`    ${userName} is the bill payer - no debt to self`);
+                }
             } else if (guest) {
                 userName = `${guest.name} (Guest)`;
+                // Guests: add amount for EPC code only, not debt tracking
+                userTotals[userId].amount += itemPrice;
+                console.log(`    ${userName} gets €${itemPrice} for EPC code only`);
             }
             
             if (splitInfo) {
@@ -454,23 +470,62 @@ function updateItemSummary() {
     if (hasSelections && hasBillPayer) {
         let summaryHTML = '<div class="user-totals">';
         
+        // Separate members and guests for display
+        const memberTotals = [];
+        const guestTotals = [];
+        
         Object.values(userTotals).forEach(user => {
             if (user.amount > 0) {
-                // Check if this payment has been confirmed
+                if (user.isGuest) {
+                    guestTotals.push(user);
+                } else {
+                    memberTotals.push(user);
+                }
+            }
+        });
+        
+        // Show member debts first (these are tracked debts)
+        memberTotals.forEach(user => {
+            const isConfirmed = isPaymentConfirmed(user.name, user.amount);
+            
+            if (isConfirmed) {
+                summaryHTML += `
+                    <div class="user-total confirmed-payment">
+                        <span class="user-name">${user.name}</span>
+                        <span class="user-amount confirmed">€${user.amount.toFixed(2)} ✅ Paid</span>
+                    </div>
+                `;
+            } else {
+                summaryHTML += `
+                    <div class="user-total">
+                        <span class="user-name">${user.name}</span>
+                        <span class="user-amount">€${user.amount.toFixed(2)}</span>
+                        <button type="button" class="btn btn-small btn-qr" onclick="generatePaymentQR('${user.name}', ${user.amount.toFixed(2)})">
+                            📱 Pay
+                        </button>
+                    </div>
+                `;
+            }
+        });
+        
+        // Show guest amounts (these are just for EPC codes, not debt tracking)
+        if (guestTotals.length > 0) {
+            summaryHTML += '<div class="guest-payments-section">';
+            summaryHTML += '<h4 class="guest-payments-title">Guest Payments (EPC Only)</h4>';
+            
+            guestTotals.forEach(user => {
                 const isConfirmed = isPaymentConfirmed(user.name, user.amount);
                 
                 if (isConfirmed) {
-                    // Show confirmed payment with different styling
                     summaryHTML += `
-                        <div class="user-total confirmed-payment">
+                        <div class="user-total guest-total confirmed-payment">
                             <span class="user-name">${user.name}</span>
                             <span class="user-amount confirmed">€${user.amount.toFixed(2)} ✅ Paid</span>
                         </div>
                     `;
                 } else {
-                    // Show unpaid amount with payment button
                     summaryHTML += `
-                        <div class="user-total">
+                        <div class="user-total guest-total">
                             <span class="user-name">${user.name}</span>
                             <span class="user-amount">€${user.amount.toFixed(2)}</span>
                             <button type="button" class="btn btn-small btn-qr" onclick="generatePaymentQR('${user.name}', ${user.amount.toFixed(2)})">
@@ -479,8 +534,10 @@ function updateItemSummary() {
                         </div>
                     `;
                 }
-            }
-        });
+            });
+            
+            summaryHTML += '</div>';
+        }
         
         summaryHTML += '</div>';
         summaryContent.innerHTML = summaryHTML;
