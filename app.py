@@ -1445,11 +1445,18 @@ def select_receipt_items(group_id):
                     user_shares[user_id] += item['individual_share']
             
             # Create expense shares for each user
+            total_shares_amount = 0
             for user_id, total_share in user_shares.items():
                 cursor.execute('''
                     INSERT INTO expense_shares (expense_id, user_id, amount)
                     VALUES (?, ?, ?)
                 ''', (expense_id, user_id, total_share))
+                total_shares_amount += total_share
+            
+            # Update the expense amount to match the sum of shares
+            cursor.execute('''
+                UPDATE expenses SET amount = ? WHERE id = ?
+            ''', (total_shares_amount, expense_id))
             
             conn.commit()
             conn.close()
