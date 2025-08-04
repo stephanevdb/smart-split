@@ -311,6 +311,10 @@ def init_db():
     
     # Migrate settlements table to add description column
     migrate_settlements_table()
+    
+    # Clean up any existing invalid user data
+    cleanup_invalid_expense_shares()
+    cleanup_invalid_settlements()
 
 # Helper functions
 def get_user_groups(user_id):
@@ -341,20 +345,24 @@ def get_group_members(group_id):
 def calculate_balances(group_id):
     conn = get_db_connection()
     
-    # Get all expenses and their shares
+    # Get valid group member IDs
+    valid_member_ids = set(member['id'] for member in get_group_members(group_id))
+    
+    # Get all expenses and their shares, but only for valid group members
     expenses = conn.execute('''
         SELECT e.id, e.amount, e.paid_by, es.user_id, es.amount as share_amount
         FROM expenses e
         JOIN expense_shares es ON e.id = es.expense_id
-        WHERE e.group_id = ?
-    ''', (group_id,)).fetchall()
+        WHERE e.group_id = ? AND es.user_id IN ({})
+    '''.format(','.join('?' * len(valid_member_ids))), (group_id,) + tuple(valid_member_ids)).fetchall()
     
-    # Get all settlements
+    # Get all settlements, but only for valid group members
     settlements = conn.execute('''
         SELECT payer_id, payee_id, amount
         FROM settlements
-        WHERE group_id = ?
-    ''', (group_id,)).fetchall()
+        WHERE group_id = ? AND payer_id IN ({}) AND payee_id IN ({})
+    '''.format(','.join('?' * len(valid_member_ids)), ','.join('?' * len(valid_member_ids))), 
+        (group_id,) + tuple(valid_member_ids) + tuple(valid_member_ids)).fetchall()
     
     conn.close()
     
@@ -536,6 +544,71 @@ def migrate_settlements_table():
             
     except Exception as e:
         print(f"Settlements table migration error: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+def cleanup_invalid_expense_shares():
+    """Remove expense shares for users that are not valid group members"""
+    conn = get_db_connection()
+    try:
+        # Get all groups
+        groups = conn.execute('SELECT id FROM groups').fetchall()
+        
+        for group in groups:
+            group_id = group['id']
+            # Get valid member IDs for this group
+            valid_member_ids = [member['id'] for member in get_group_members(group_id)]
+            
+            if valid_member_ids:
+                # Delete expense shares for invalid user IDs
+                placeholders = ','.join('?' * len(valid_member_ids))
+                deleted = conn.execute('''
+                    DELETE FROM expense_shares 
+                    WHERE expense_id IN (
+                        SELECT id FROM expenses WHERE group_id = ?
+                    ) AND user_id NOT IN ({})
+                '''.format(placeholders), (group_id,) + tuple(valid_member_ids))
+                
+                if deleted.rowcount > 0:
+                    print(f"Cleaned up {deleted.rowcount} invalid expense shares for group {group_id}")
+        
+        conn.commit()
+        print("Completed cleanup of invalid expense shares")
+    except Exception as e:
+        print(f"Error during cleanup: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+def cleanup_invalid_settlements():
+    """Remove settlements for users that are not valid group members"""
+    conn = get_db_connection()
+    try:
+        # Get all groups
+        groups = conn.execute('SELECT id FROM groups').fetchall()
+        
+        for group in groups:
+            group_id = group['id']
+            # Get valid member IDs for this group
+            valid_member_ids = [member['id'] for member in get_group_members(group_id)]
+            
+            if valid_member_ids:
+                # Delete settlements for invalid user IDs
+                placeholders = ','.join('?' * len(valid_member_ids))
+                deleted = conn.execute('''
+                    DELETE FROM settlements 
+                    WHERE group_id = ? AND (payer_id NOT IN ({}) OR payee_id NOT IN ({}))
+                '''.format(placeholders, placeholders), 
+                    (group_id,) + tuple(valid_member_ids) + tuple(valid_member_ids))
+                
+                if deleted.rowcount > 0:
+                    print(f"Cleaned up {deleted.rowcount} invalid settlements for group {group_id}")
+        
+        conn.commit()
+        print("Completed cleanup of invalid settlements")
+    except Exception as e:
+        print(f"Error during cleanup: {e}")
         conn.rollback()
     finally:
         conn.close()
@@ -1234,6 +1307,17 @@ def select_receipt_items(group_id):
         except json.JSONDecodeError:
             confirmed_payments = []
         
+        # Get guest users data (but don't include them in group expense calculations)
+        guest_users_data = request.form.get('guest_users', '[]')
+        try:
+            guest_users = json.loads(guest_users_data) if guest_users_data else []
+            guest_user_ids = set(guest['id'] for guest in guest_users)
+        except json.JSONDecodeError:
+            guest_user_ids = set()
+        
+        # Get valid group member IDs only
+        valid_member_ids = set(member['id'] for member in members)
+        
         # Process item selections
         selected_items = []
         total_amount = 0
@@ -1256,27 +1340,31 @@ def select_receipt_items(group_id):
                     selected_by = [int(dropdown_user)]
             
             if selected_by:
-                # Calculate individual share for this single item
-                try:
-                    price = float(item.get('price', 0))
-                    
-                    # Calculate individual share based on item price
-                    individual_share = round(price / len(selected_by), 2)
-                    
-                    selected_items.append({
-                        'name': item['name'],
-                        'price': price,
-                        'selected_by': selected_by,
-                        'individual_share': individual_share,
-                        'is_split': is_split_mode
-                    })
-                    total_amount += price
-                except (ValueError, TypeError, ZeroDivisionError) as e:
-                    flash(f'Error processing item {item.get("name", "Unknown")}: {str(e)}', 'error')
-                    conn.close()
-                    return render_template('groups/select_receipt_items.html', 
-                                         group=group, members=members, 
-                                         receipt_analysis=receipt_analysis)
+                # Filter out guest users - only include actual group members in expense calculations
+                group_members_only = [user_id for user_id in selected_by if user_id in valid_member_ids]
+                
+                if group_members_only:  # Only create expense if group members are involved
+                    # Calculate individual share for this single item
+                    try:
+                        price = float(item.get('price', 0))
+                        
+                        # Calculate individual share based on group members only (ignore guests for debt tracking)
+                        individual_share = round(price / len(group_members_only), 2)
+                        
+                        selected_items.append({
+                            'name': item['name'],
+                            'price': price,
+                            'selected_by': group_members_only,  # Only group members for expense tracking
+                            'individual_share': individual_share,
+                            'is_split': is_split_mode
+                        })
+                        total_amount += price
+                    except (ValueError, TypeError, ZeroDivisionError) as e:
+                        flash(f'Error processing item {item.get("name", "Unknown")}: {str(e)}', 'error')
+                        conn.close()
+                        return render_template('groups/select_receipt_items.html', 
+                                             group=group, members=members, 
+                                             receipt_analysis=receipt_analysis)
         
         if not selected_items:
             flash('Please select at least one item and assign it to users.', 'error')
@@ -1436,13 +1524,17 @@ def expense_detail(group_id, expense_id):
         return redirect(url_for('group_detail', group_id=group_id))
     
     # Get expense shares (who owes what)
+    # Get valid group member IDs for this group
+    members = get_group_members(group_id)
+    valid_member_ids = [member['id'] for member in members]
+    
     expense_shares = conn.execute('''
         SELECT es.*, u.username, u.id as user_id
         FROM expense_shares es
         JOIN users u ON es.user_id = u.id
-        WHERE es.expense_id = ?
+        WHERE es.expense_id = ? AND es.user_id IN ({})
         ORDER BY u.username
-    ''', (expense_id,)).fetchall()
+    '''.format(','.join('?' * len(valid_member_ids))), (expense_id,) + tuple(valid_member_ids)).fetchall()
     
     # Get group info for navigation
     group = conn.execute('SELECT * FROM groups WHERE id = ?', (group_id,)).fetchone()
@@ -1493,17 +1585,20 @@ def balance_details(group_id):
         ORDER BY e.created_at DESC
     ''', (group_id,)).fetchall()
     
-    # Get all expense shares
+    # Get valid group member IDs
+    valid_member_ids = [member['id'] for member in members]
+    
+    # Get all expense shares, but only for valid group members
     expense_shares = conn.execute('''
         SELECT es.*, e.description as expense_description, e.created_at, u.username
         FROM expense_shares es
         JOIN expenses e ON es.expense_id = e.id
         JOIN users u ON es.user_id = u.id
-        WHERE e.group_id = ?
+        WHERE e.group_id = ? AND es.user_id IN ({})
         ORDER BY e.created_at DESC, u.username
-    ''', (group_id,)).fetchall()
+    '''.format(','.join('?' * len(valid_member_ids))), (group_id,) + tuple(valid_member_ids)).fetchall()
     
-    # Get all settlements
+    # Get all settlements, but only for valid group members
     settlements = conn.execute('''
         SELECT s.*, 
                up.username as payer_name, 
@@ -1511,9 +1606,10 @@ def balance_details(group_id):
         FROM settlements s
         JOIN users up ON s.payer_id = up.id
         JOIN users ue ON s.payee_id = ue.id
-        WHERE s.group_id = ?
+        WHERE s.group_id = ? AND s.payer_id IN ({}) AND s.payee_id IN ({})
         ORDER BY s.created_at DESC
-    ''', (group_id,)).fetchall()
+    '''.format(','.join('?' * len(valid_member_ids)), ','.join('?' * len(valid_member_ids))), 
+        (group_id,) + tuple(valid_member_ids) + tuple(valid_member_ids)).fetchall()
     
     conn.close()
     

@@ -118,6 +118,7 @@ let receiptItems = [];
 let members = [];
 let guestUsers = [];
 let guestIdCounter = 1000; // Start with high number to avoid conflicts with member IDs
+let guestTotals = {}; // Separate tracking for guest EPC amounts
 
 document.addEventListener('DOMContentLoaded', function() {
     receiptItems = JSON.parse(document.getElementById('receipt-items-data').textContent);
@@ -166,13 +167,15 @@ function updateItemSummary() {
         let hasSelections = false;
         let hasBillPayer = billPayerDropdown && billPayerDropdown.value !== '';
         
-        // Initialize user totals for members and guests
+        // Initialize user totals for members only (guests tracked separately)
         members.forEach(member => {
             userTotals[member.id] = { name: member.username, amount: 0, isGuest: false };
         });
         
+        // Initialize separate guest totals for EPC codes only
+        guestTotals = {};
         guestUsers.forEach(guest => {
-            userTotals[guest.id] = { name: guest.name, amount: 0, isGuest: true };
+            guestTotals[guest.id] = { name: guest.name, amount: 0 };
         });
         
         console.log('=== Receipt Items Calculation Debug ===');
@@ -200,19 +203,19 @@ function updateItemSummary() {
             
             if (member) {
                 userName = member.username;
-                // Members: add to debt tracking (ignore if they're the bill payer)
+                // Members: add to group debt tracking (ignore if they're the bill payer)
                 const billPayerId = billPayerDropdown ? parseInt(billPayerDropdown.value) : null;
                 if (userId !== billPayerId) {
                     userTotals[userId].amount += itemPrice;
-                    console.log(`    ${userName} owes €${itemPrice} for individual item`);
+                    console.log(`    ${userName} owes €${itemPrice} to group (debt tracking)`);
                 } else {
                     console.log(`    ${userName} is the bill payer - no debt to self`);
                 }
             } else if (guest) {
                 userName = `${guest.name} (Guest)`;
-                // Guests: add amount for EPC code only, not debt tracking
-                userTotals[userId].amount += itemPrice;
-                console.log(`    ${userName} gets €${itemPrice} for EPC code only`);
+                // Guests: add to separate totals for EPC code only (no group debt)
+                guestTotals[userId].amount += itemPrice;
+                console.log(`    ${userName} gets €${itemPrice} for EPC code only (isolated from group)`);
             }
             
             if (itemInfo) {
@@ -234,65 +237,54 @@ function updateItemSummary() {
     if (hasSelections && hasBillPayer) {
         let summaryHTML = '<div class="user-totals">';
         
-        // Separate members and guests for display
-        const memberTotals = [];
-        const guestTotals = [];
-        
+        // Show group member debts only (these affect the group)
         Object.values(userTotals).forEach(user => {
             if (user.amount > 0) {
-                if (user.isGuest) {
-                    guestTotals.push(user);
-                } else {
-                    memberTotals.push(user);
-                }
-            }
-        });
-        
-        // Show member debts first (these are tracked debts)
-        memberTotals.forEach(user => {
-            const isConfirmed = isPaymentConfirmed(user.name, user.amount);
-            
-            if (isConfirmed) {
-                summaryHTML += `
-                    <div class="user-total confirmed-payment">
-                        <span class="user-name">${user.name}</span>
-                        <span class="user-amount confirmed">€${user.amount.toFixed(2)} ✅ Paid</span>
-                    </div>
-                `;
-            } else {
-                summaryHTML += `
-                    <div class="user-total">
-                        <span class="user-name">${user.name}</span>
-                        <span class="user-amount">€${user.amount.toFixed(2)}</span>
-                        <button type="button" class="btn btn-small btn-qr" onclick="generatePaymentQR('${user.name}', ${user.amount.toFixed(2)})">
-                            📱 Pay
-                        </button>
-                    </div>
-                `;
-            }
-        });
-        
-        // Show guest amounts (these are just for EPC codes, not debt tracking)
-        if (guestTotals.length > 0) {
-            summaryHTML += '<div class="guest-payments-section">';
-            summaryHTML += '<h4 class="guest-payments-title">Guest Payments (EPC Only)</h4>';
-            
-            guestTotals.forEach(user => {
                 const isConfirmed = isPaymentConfirmed(user.name, user.amount);
                 
                 if (isConfirmed) {
                     summaryHTML += `
-                        <div class="user-total guest-total confirmed-payment">
+                        <div class="user-total confirmed-payment">
                             <span class="user-name">${user.name}</span>
                             <span class="user-amount confirmed">€${user.amount.toFixed(2)} ✅ Paid</span>
                         </div>
                     `;
                 } else {
                     summaryHTML += `
-                        <div class="user-total guest-total">
+                        <div class="user-total">
                             <span class="user-name">${user.name}</span>
                             <span class="user-amount">€${user.amount.toFixed(2)}</span>
                             <button type="button" class="btn btn-small btn-qr" onclick="generatePaymentQR('${user.name}', ${user.amount.toFixed(2)})">
+                                📱 Pay
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+        });
+        
+        // Show guest payments separately (isolated from group calculations)
+        const guestValues = Object.values(guestTotals).filter(guest => guest.amount > 0);
+        if (guestValues.length > 0) {
+            summaryHTML += '<div class="guest-payments-section">';
+            summaryHTML += '<h4 class="guest-payments-title">Guest Payments (EPC Only)</h4>';
+            
+            guestValues.forEach(guest => {
+                const isConfirmed = isPaymentConfirmed(guest.name, guest.amount);
+                
+                if (isConfirmed) {
+                    summaryHTML += `
+                        <div class="user-total guest-total confirmed-payment">
+                            <span class="user-name">${guest.name}</span>
+                            <span class="user-amount confirmed">€${guest.amount.toFixed(2)} ✅ Paid</span>
+                        </div>
+                    `;
+                } else {
+                    summaryHTML += `
+                        <div class="user-total guest-total">
+                            <span class="user-name">${guest.name}</span>
+                            <span class="user-amount">€${guest.amount.toFixed(2)}</span>
+                            <button type="button" class="btn btn-small btn-qr" onclick="generatePaymentQR('${guest.name}', ${guest.amount.toFixed(2)})">
                                 📱 Pay
                             </button>
                         </div>
