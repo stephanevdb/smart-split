@@ -1,282 +1,165 @@
-# 💰 Smart Split - Expense Sharing PWA
+# Smart Split - Expense Sharing App
 
-A modern Progressive Web App (PWA) for splitting expenses with friends and groups. Track shared costs, scan receipts with AI, and settle up easily.
+A full-stack expense sharing application built with Vite + PrimeVue frontend and Go backend.
 
-## ✨ Features
+## Project Structure
 
-### 🔐 User Management
-- Secure user registration and authentication
-- **Password reset with email verification** 📧
-- Personal profiles with bank details (IBAN/BIC)
-- Password hashing with werkzeug security
-
-### 👥 Group Management
-- Create expense groups with custom names and descriptions
-- Invite friends via unique invite codes or QR codes
-- Join groups using invite links
-- Group admin controls
-
-### 💸 Expense Tracking
-- Add expenses with custom descriptions and amounts
-- Split costs among group members
-- **Detailed expense views with breakdown of who owes what**
-- Automatic balance calculations
-- Track who owes what to whom
-
-### 🤖 AI-Powered Receipt Scanning
-- Upload receipt photos for automatic expense extraction
-- Powered by Google Gemini AI
-- Select specific items from receipts to add as expenses
-- Smart text recognition and amount parsing
-
-### 📊 Dashboard & Analytics
-- Personal dashboard with expense overview
-- Balance summaries (what you owe vs. what you're owed)
-- **Detailed balance calculation breakdown** showing exactly how balances are computed 🧮
-- Recent activity tracking
-- Group statistics
-
-### 📱 Progressive Web App
-- Install on any device like a native app
-- Offline functionality with service worker
-- **Minimum cache TTL** and automatic refresh every hour for maximum freshness
-- Responsive design for mobile and desktop
-- **Collapsible interface sections** for optimized mobile experience (members, expenses)
-- Push notification support
-
-### 🏦 Settlement Features
-- Calculate optimal debt settlements
-- Bank details integration for easy transfers
-- Settlement history tracking
-
-## 🛠️ Technology Stack
-
-- **Backend**: Flask (Python)
-- **Database**: SQLite with connection pooling
-- **Authentication**: Flask-Login with secure sessions
-- **Forms**: WTForms with CSRF protection
-- **AI Integration**: Google Gemini API for receipt scanning
-- **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
-- **PWA**: Service Worker, Web App Manifest
-- **Deployment**: Docker, Gunicorn
-- **QR Codes**: qrcode library for invite generation
-
-## 🚀 Quick Start
-
-### Option 1: Docker (Recommended)
-
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd smart-split
-   ```
-
-2. **Set up environment variables**:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your settings
-   ```
-
-3. **Start with Docker**:
-   ```bash
-   # Production mode
-   ./docker-start.sh
-   
-   # Development mode
-   ./docker-start.sh dev
-   ```
-
-4. **Access the app**: Open http://localhost:3000
-
-### Option 2: Local Development
-
-1. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. **Set up environment**:
-   ```bash
-   export SECRET_KEY="your-secret-key"
-   export GEMINI_API_KEY="your-gemini-api-key"  # Optional
-   ```
-
-3. **Run the application**:
-   ```bash
-   python app.py
-   ```
-
-## 📋 Environment Variables
-
-Create a `.env` file with the following variables:
-
-```env
-# Required
-SECRET_KEY=your-very-secure-secret-key-here
-
-# Optional - for AI receipt scanning
-GEMINI_API_KEY=your-google-gemini-api-key
-
-# Optional - database path (defaults to splitwise.db)
-DATABASE=splitwise.db
-
-# Email configuration for password reset (optional but recommended)
-MAIL_SERVER=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USE_TLS=True
-MAIL_USERNAME=your-email@gmail.com
-MAIL_PASSWORD=your-app-password-here
-MAIL_DEFAULT_SENDER=your-email@gmail.com
+```
+smart-split-vite/
+├── frontend/          # Vue.js + Vite + PrimeVue frontend
+├── backend/           # Go backend with Gin framework
+└── README.md          # This file
 ```
 
-> 📧 **Email Setup**: For detailed email configuration instructions, see [EMAIL_SETUP.md](EMAIL_SETUP.md)
+## Features
 
-## 🐳 Docker Deployment
+- **User Management**: Create, read, update, and delete users
+- **Expense Tracking**: Record and manage shared expenses
+- **Group Management**: Organize users into groups for expense sharing
+- **RESTful API**: Clean backend API for frontend integration
+- **Modern UI**: Beautiful interface built with PrimeVue components
 
-### Production
+## Prerequisites
+
+- Node.js (v18 or higher)
+- Go (v1.21 or higher)
+- npm or yarn
+
+## Quick Start
+
+### Backend (Go)
+
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+
+2. Run the Go server:
+   ```bash
+   go run main.go
+   ```
+
+The backend will start on `http://localhost:8080`
+
+### Frontend (Vue.js + Vite)
+
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+
+2. Install dependencies (if not already done):
+   ```bash
+   npm install
+   ```
+
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+The frontend will start on `http://localhost:5173`
+
+## API Endpoints
+
+### Users
+- `GET /api/users` - Get all users
+- `GET /api/users/:id` - Get user by ID
+- `POST /api/users` - Create new user
+- `PUT /api/users/:id` - Update user
+- `DELETE /api/users/:id` - Delete user
+
+### Expenses
+- `GET /api/expenses` - Get all expenses
+- `GET /api/expenses/:id` - Get expense by ID
+- `POST /api/expenses` - Create new expense
+- `PUT /api/expenses/:id` - Update expense
+- `DELETE /api/expenses/:id` - Delete expense
+
+### Groups
+- `GET /api/groups` - Get all groups
+- `GET /api/groups/:id` - Get group by ID
+- `POST /api/groups` - Create new group
+- `PUT /api/groups/:id` - Update group
+- `DELETE /api/groups/:id` - Delete group
+
+### Health Check
+- `GET /api/health` - API health status
+
+## Data Models
+
+### User
+```json
+{
+  "id": 1,
+  "name": "John Doe",
+  "email": "john@example.com"
+}
+```
+
+### Expense
+```json
+{
+  "id": 1,
+  "description": "Dinner",
+  "amount": 75.50,
+  "paidBy": 1,
+  "splitBetween": [1, 2, 3],
+  "date": "2024-01-15"
+}
+```
+
+### Group
+```json
+{
+  "id": 1,
+  "name": "Roommates",
+  "users": [1, 2, 3]
+}
+```
+
+## Technologies Used
+
+### Frontend
+- **Vue.js 3** - Progressive JavaScript framework
+- **Vite** - Fast build tool and dev server
+- **PrimeVue** - Rich UI component library
+- **PrimeIcons** - Icon library
+
+### Backend
+- **Go** - Fast and efficient programming language
+- **Gin** - HTTP web framework
+- **CORS** - Cross-origin resource sharing support
+
+## Development
+
+### Adding New Features
+
+1. **Backend**: Add new routes and handlers in `backend/main.go`
+2. **Frontend**: Create new Vue components in `frontend/src/components/`
+
+### Building for Production
+
+#### Frontend
 ```bash
-docker compose up -d --build
+cd frontend
+npm run build
 ```
 
-### Development
+#### Backend
 ```bash
-docker compose --profile development up --build smart-split-dev
+cd backend
+go build -o smart-split-backend main.go
 ```
 
-The application will be available at:
-- Production: http://localhost:3077
-- Development: http://localhost:3000
-
-### Volumes
-- `./data` - SQLite database persistence
-- `./uploads` - Receipt image storage
-
-## 📖 Usage Guide
-
-### Getting Started
-1. **Register** a new account or **login** with existing credentials
-2. **Create a group** for your shared expenses (e.g., "Weekend Trip")
-3. **Invite friends** using the generated invite code or QR code
-4. **Add expenses** manually or by scanning receipts
-
-### Adding Expenses
-- **Manual Entry**: Enter description, amount, and select who paid
-- **Receipt Scanning**: Upload a photo, let AI extract items, select what to include
-- **Cost Splitting**: Expenses are automatically split among group members
-
-### Managing Groups
-- **View Group Details**: See all expenses, members, and balances
-- **Group Admin**: Invite/remove members, manage group settings
-- **Leave Group**: Exit groups you no longer need
-
-### Settling Up
-- **View Balances**: Dashboard shows what you owe and what you're owed
-- **Settlement Suggestions**: App calculates optimal payment paths
-- **Bank Integration**: Add IBAN/BIC for easy bank transfers
-
-## 🔧 Features Overview
-
-### Core Routes
-- `/` - Home page with authentication
-- `/login` - User login
-- `/register` - User registration
-- `/forgot-password` - Request password reset
-- `/reset-password/<token>` - Reset password with email token
-- `/dashboard` - Personal expense overview
-- `/groups` - Group management
-- `/groups/create` - Create new groups
-- `/groups/{id}` - Group details and expenses
-- `/groups/{id}/balance-details` - **Detailed balance calculation breakdown**
-- `/groups/{id}/expenses/{expense_id}` - **Detailed expense view**
-- `/groups/{id}/add_expense` - Add new expenses
-- `/groups/{id}/scan_receipt` - AI receipt scanning
-- `/settings` - User profile and bank details
-
-### 🔄 Auto-Refresh System
-Smart Split includes an aggressive auto-refresh system with minimum cache TTL for maximum freshness:
-
-**How it works:**
-- **Automatic cache clearing** every hour (reduced from 24 hours)
-- **Periodic checks** during app usage (every 5 minutes)
-- **Stale cache cleanup** every minute
-- **Service worker updates** checked every minute
-- **Network-first strategy** - always tries fresh content first
-- **Minimum cache TTL** - 1 minute for static resources, no cache for dynamic content
-
-**Manual testing:**
-- Open browser developer console
-- Type `testCacheRefresh()` to manually trigger cache check
-- View console logs for cache status and timing information
-
-**Background behavior:**
-- Cache timestamps are stored locally
-- Old cache versions are automatically cleaned up
-- Users get notification when automatic refresh occurs
-- No data loss - only interface cache is refreshed
-
-### API Endpoints
-- User authentication (login/register/logout)
-- Group CRUD operations
-- Expense management
-- Receipt processing with AI
-- Balance calculations
-- QR code generation
-
-### Database Schema
-- **Users**: Authentication and profile data
-- **Groups**: Expense groups with invite codes
-- **Group Members**: Many-to-many user-group relationships
-- **Expenses**: Individual expense records
-- **Expense Splits**: How expenses are divided among members
-
-## 🔒 Security Features
-
-- Password hashing with werkzeug
-- CSRF protection on all forms
-- Secure session management
-- Input validation and sanitization
-- SQL injection prevention
-- File upload restrictions (7MB limit)
-
-## 📱 PWA Features
-
-- **Installable**: Add to home screen on mobile devices
-- **Offline Support**: Basic functionality without internet
-- **Responsive Design**: Works on all screen sizes
-- **Fast Loading**: Service worker caching
-- **App-like Experience**: Full-screen mode, custom icons
-
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
-## 📝 License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-If you encounter any issues:
-
-1. Check the [Docker documentation](DOCKER.md) for deployment issues
-2. Ensure all environment variables are properly set
-3. Verify that the uploads and data directories are writable
-4. Check the application logs for detailed error messages
-
-## 🚀 Roadmap
-
-- [ ] Mobile app versions (React Native/Flutter)
-- [ ] Multiple currency support
-- [ ] Advanced expense categories
-- [ ] Email notifications
-- [ ] Export functionality (PDF/CSV)
-- [ ] Integration with banking APIs
-- [ ] Advanced analytics and reporting
-
----
-
-**Smart Split** - Making expense sharing simple and smart! 💰✨
+This project is open source and available under the [MIT License](LICENSE).
