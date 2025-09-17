@@ -414,85 +414,6 @@ func main() {
 		})
 	})
 
-	// Google OAuth endpoint
-	r.POST("/api/auth/google", func(c *gin.Context) {
-		var req struct {
-			AccessToken string `json:"access_token"`
-		}
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
-			return
-		}
-
-		// Verify Google access token
-		// In a production app, you would verify the token with Google's API
-		// For now, we'll create a mock user based on the token
-		// You should implement proper Google token verification here
-
-		// Mock user creation for demo purposes
-		// In production, extract user info from Google's userinfo endpoint
-		username := "google_user_" + generateToken()[:8]
-		email := "user@example.com" // Extract from Google userinfo
-		fullName := "Google User"   // Extract from Google userinfo
-
-		// Check if user already exists (by email in a real implementation)
-		var existingUser User
-		err := db.QueryRow("SELECT id, username, email, full_name, iban, bic, created_at FROM users WHERE email = $1", email).Scan(
-			&existingUser.ID, &existingUser.Username, &existingUser.Email, &existingUser.FullName,
-			&existingUser.IBAN, &existingUser.BIC, &existingUser.CreatedAt)
-
-		if err == nil {
-			// User exists, return existing user
-			token, err := GenerateToken(existingUser.ID, existingUser.Username)
-			if err != nil {
-				log.Printf("Error generating token: %v", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
-				return
-			}
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Google login successful",
-				"user":    existingUser,
-				"token":   token,
-			})
-			return
-		}
-
-		// Create new user
-		var userID int
-		err = db.QueryRow(`
-			INSERT INTO users (username, email, full_name, password_hash, iban, bic, created_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
-			RETURNING id
-		`, username, email, fullName, "google_oauth_user", "", "", time.Now()).Scan(&userID)
-
-		if err != nil {
-			log.Printf("Error creating Google user: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
-			return
-		}
-
-		user := User{
-			ID:        userID,
-			Username:  username,
-			Email:     email,
-			FullName:  fullName,
-			IBAN:      "",
-			BIC:       "",
-			CreatedAt: time.Now(),
-		}
-
-		token, err := GenerateToken(user.ID, user.Username)
-		if err != nil {
-			log.Printf("Error generating token: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Google login successful",
-			"user":    user,
-			"token":   token,
-		})
-	})
 
 	// Profile endpoints
 	r.GET("/api/profile", AuthMiddleware(), func(c *gin.Context) {
@@ -918,7 +839,6 @@ func main() {
 				"health":        "/api/health",
 				"register":      "/api/auth/register",
 				"login":         "/api/auth/login",
-				"google_login":  "/api/auth/google",
 				"profile":       "/api/profile",
 				"groups":        "/api/groups",
 				"group_details": "/api/groups/:id",

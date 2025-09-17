@@ -76,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, computed } from 'vue';
+import { ref, reactive, watch } from 'vue';
 import { type UpdateProfileRequest } from '../services/api';
 
 interface Props {
@@ -250,12 +250,4 @@ watch(() => props.user, (newUser) => {
   }
 }, { immediate: true });
 
-const handleSubmit = () => {
-  // Clean IBAN before sending to API (remove spaces)
-  const cleanedForm = {
-    ...form,
-    iban: form.iban.replace(/\s/g, '')
-  };
-  emit('update', cleanedForm);
-};
 </script>

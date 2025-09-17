@@ -175,7 +175,7 @@ const joinGroup = async (groupCode: string) => {
   joinErrorMessage.value = '';
   
   try {
-    await apiService.joinGroup(groupCode);
+    await apiService.joinGroup({ invite_code: groupCode });
     
     // Reload groups to show the newly joined group
     await loadGroups();

@@ -74,9 +74,6 @@ export interface AuthResponse {
   token: string;
 }
 
-export interface GoogleAuthRequest {
-  access_token: string;
-}
 
 export interface ProfileResponse {
   user: User;
@@ -229,35 +226,6 @@ export class ApiService {
     }
   }
 
-  public async googleLogin(idToken: string): Promise<AuthResponse> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/google`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ access_token: idToken } as GoogleAuthRequest),
-        signal: AbortSignal.timeout(10000) // 10 second timeout
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Google login failed');
-      }
-
-      const authResponse = await response.json();
-      
-      // Store the token
-      if (authResponse.token) {
-        this.setAuthToken(authResponse.token);
-      }
-
-      return authResponse;
-    } catch (error) {
-      console.error('Google login failed:', error);
-      throw error;
-    }
-  }
 
   public async getProfile(): Promise<ProfileResponse> {
     try {
