@@ -158,6 +158,13 @@ export class ApiService {
     
     if (this.authToken) {
       headers['Authorization'] = `Bearer ${this.authToken}`;
+      console.log('API Service - Adding auth header:', {
+        hasToken: !!this.authToken,
+        token: `${this.authToken.substring(0, 20)}...`,
+        header: `Bearer ${this.authToken.substring(0, 20)}...`
+      });
+    } else {
+      console.log('API Service - No auth token available for headers');
     }
     
     return headers;
@@ -467,4 +474,26 @@ export const apiService = ApiService.getInstance();
 // Expose debug method globally for easy debugging
 if (typeof window !== 'undefined') {
   (window as any).debugAuth = () => apiService.debugAuthState();
+  (window as any).testAuth = async () => {
+    console.log('=== TESTING AUTHENTICATION ===');
+    try {
+      const response = await apiService.getProfile();
+      console.log('✅ Profile fetch successful:', response);
+    } catch (error) {
+      console.log('❌ Profile fetch failed:', error);
+    }
+    console.log('==============================');
+  };
+  (window as any).clearAuth = () => {
+    console.log('=== CLEARING AUTHENTICATION ===');
+    apiService.logout();
+    console.log('Authentication cleared');
+    console.log('==============================');
+  };
+  (window as any).checkLocalStorage = () => {
+    console.log('=== LOCAL STORAGE CHECK ===');
+    console.log('authToken:', localStorage.getItem('authToken'));
+    console.log('currentUser:', localStorage.getItem('currentUser'));
+    console.log('===========================');
+  };
 }
