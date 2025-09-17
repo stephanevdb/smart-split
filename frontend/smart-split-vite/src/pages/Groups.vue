@@ -117,6 +117,14 @@ onMounted(async () => {
   // Check if user is properly authenticated before loading groups
   const savedUser = localStorage.getItem('currentUser');
   const hasToken = apiService.isAuthenticated();
+  const token = apiService.getAuthToken();
+  
+  console.log('Groups page - Authentication check:', {
+    savedUser: !!savedUser,
+    hasToken,
+    token: token ? `${token.substring(0, 20)}...` : null,
+    localStorageToken: localStorage.getItem('authToken') ? `${localStorage.getItem('authToken')?.substring(0, 20)}...` : null
+  });
   
   if (!savedUser || !hasToken) {
     // User is not authenticated, redirect to home or show login

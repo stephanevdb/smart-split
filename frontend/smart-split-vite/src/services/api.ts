@@ -102,9 +102,17 @@ export class ApiService {
   // Token management methods
   private loadAuthToken(): void {
     this.authToken = localStorage.getItem('authToken');
+    console.log('API Service - Token loaded:', {
+      hasToken: !!this.authToken,
+      token: this.authToken ? `${this.authToken.substring(0, 20)}...` : null
+    });
   }
 
   public setAuthToken(token: string): void {
+    console.log('API Service - Setting auth token:', {
+      token: `${token.substring(0, 20)}...`,
+      length: token.length
+    });
     this.authToken = token;
     localStorage.setItem('authToken', token);
   }
@@ -119,12 +127,27 @@ export class ApiService {
   }
 
   public isAuthenticated(): boolean {
-    return this.authToken !== null;
+    const isAuth = this.authToken !== null;
+    console.log('API Service - isAuthenticated check:', {
+      isAuth,
+      authToken: this.authToken ? `${this.authToken.substring(0, 20)}...` : null
+    });
+    return isAuth;
   }
 
   public logout(): void {
     this.clearAuthToken();
     localStorage.removeItem('currentUser');
+  }
+
+  // Debug method to check authentication state
+  public debugAuthState(): void {
+    console.log('=== AUTH DEBUG INFO ===');
+    console.log('API Service authToken:', this.authToken ? `${this.authToken.substring(0, 20)}...` : null);
+    console.log('localStorage authToken:', localStorage.getItem('authToken') ? `${localStorage.getItem('authToken')?.substring(0, 20)}...` : null);
+    console.log('localStorage currentUser:', localStorage.getItem('currentUser') ? 'EXISTS' : 'MISSING');
+    console.log('isAuthenticated():', this.isAuthenticated());
+    console.log('========================');
   }
 
   // Helper method to get headers with auth token
@@ -440,3 +463,8 @@ export class ApiService {
 }
 
 export const apiService = ApiService.getInstance();
+
+// Expose debug method globally for easy debugging
+if (typeof window !== 'undefined') {
+  (window as any).debugAuth = () => apiService.debugAuthState();
+}

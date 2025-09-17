@@ -113,6 +113,14 @@ const successMessage = ref('');
 onMounted(async () => {
   const savedUser = localStorage.getItem('currentUser');
   const hasToken = apiService.isAuthenticated();
+  const token = apiService.getAuthToken();
+  
+  console.log('Profile page - Authentication check:', {
+    savedUser: !!savedUser,
+    hasToken,
+    token: token ? `${token.substring(0, 20)}...` : null,
+    localStorageToken: localStorage.getItem('authToken') ? `${localStorage.getItem('authToken')?.substring(0, 20)}...` : null
+  });
   
   if (savedUser && hasToken) {
     try {
@@ -142,6 +150,12 @@ onMounted(async () => {
 
 // Methods
 const handleAuthSuccess = (user: User) => {
+  console.log('Profile page - Auth success:', {
+    user: !!user,
+    hasToken: apiService.isAuthenticated(),
+    token: apiService.getAuthToken() ? `${apiService.getAuthToken()?.substring(0, 20)}...` : null
+  });
+  
   currentUser.value = user;
   isLoggedIn.value = true;
   

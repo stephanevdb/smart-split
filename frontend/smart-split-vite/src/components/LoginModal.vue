@@ -113,10 +113,17 @@ const handleSubmit = async () => {
   errorMessage.value = '';
 
   try {
+    console.log('LoginModal - Attempting login for:', form.username);
     const response = await apiService.login(form);
+    console.log('LoginModal - Login successful:', {
+      hasUser: !!response.user,
+      hasToken: !!response.token,
+      token: response.token ? `${response.token.substring(0, 20)}...` : null
+    });
     emit('success', response.user);
     resetForm();
   } catch (error) {
+    console.error('LoginModal - Login failed:', error);
     errorMessage.value = error instanceof Error ? error.message : 'Login failed';
   } finally {
     isLoading.value = false;
