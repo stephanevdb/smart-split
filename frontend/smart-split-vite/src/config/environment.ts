@@ -12,11 +12,11 @@ export const config = {
   }
 };
 
-// Get current environment
-const isDevelopment = import.meta.env.DEV;
+// Get current environment - check if we're in production build
+const isProduction = import.meta.env.PROD;
 
 // Export the appropriate configuration
-export const currentConfig = isDevelopment ? config.development : config.production;
+export const currentConfig = isProduction ? config.production : config.development;
 
 // Export API base URL for use in services
 export const API_BASE_URL = currentConfig.apiBaseUrl;
