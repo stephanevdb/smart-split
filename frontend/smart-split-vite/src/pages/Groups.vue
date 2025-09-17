@@ -114,6 +114,16 @@ const currentUser = computed(() => {
 });
 
 onMounted(async () => {
+  // Check if user is properly authenticated before loading groups
+  const savedUser = localStorage.getItem('currentUser');
+  const hasToken = apiService.isAuthenticated();
+  
+  if (!savedUser || !hasToken) {
+    // User is not authenticated, redirect to home or show login
+    errorMessage.value = 'Please log in to view your groups';
+    return;
+  }
+  
   await loadGroups();
 });
 
@@ -131,9 +141,17 @@ const loadGroups = async () => {
     const response = await apiService.getGroups();
     groups.value = response.groups || [];
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Failed to load groups';
+    const errorMsg = error instanceof Error ? error.message : 'Failed to load groups';
+    errorMessage.value = errorMsg;
     console.error('Failed to load groups:', error);
     groups.value = []; // Ensure groups is always an array
+    
+    // If it's an authentication error, clear the session
+    if (errorMsg.includes('Authorization') || errorMsg.includes('Unauthorized') || errorMsg.includes('401')) {
+      console.log('Authentication error detected, clearing session');
+      localStorage.removeItem('currentUser');
+      apiService.logout();
+    }
   } finally {
     isLoading.value = false;
   }

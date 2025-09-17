@@ -110,16 +110,33 @@ const errorMessage = ref('');
 const successMessage = ref('');
 
 // Check if user is logged in on component mount
-onMounted(() => {
+onMounted(async () => {
   const savedUser = localStorage.getItem('currentUser');
-  if (savedUser) {
+  const hasToken = apiService.isAuthenticated();
+  
+  if (savedUser && hasToken) {
     try {
       currentUser.value = JSON.parse(savedUser);
       isLoggedIn.value = true;
+      
+      // Verify the token is still valid by trying to fetch the profile
+      try {
+        const response = await apiService.getProfile();
+        currentUser.value = response.user;
+        localStorage.setItem('currentUser', JSON.stringify(response.user));
+      } catch (error) {
+        console.error('Token validation failed:', error);
+        // Token is invalid, clear everything
+        handleLogout();
+      }
     } catch (error) {
       console.error('Error parsing saved user:', error);
-      localStorage.removeItem('currentUser');
+      handleLogout();
     }
+  } else if (savedUser && !hasToken) {
+    // User data exists but no token, clear everything
+    console.log('User data found but no valid token, clearing session');
+    handleLogout();
   }
 });
 
@@ -195,6 +212,7 @@ const handleLogout = () => {
   currentUser.value = null;
   isLoggedIn.value = false;
   localStorage.removeItem('currentUser');
+  apiService.logout(); // This will clear the token from API service and localStorage
   
   // Clear messages
   errorMessage.value = '';
