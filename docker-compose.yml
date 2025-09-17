@@ -47,7 +47,7 @@ services:
     environment:
       - VITE_API_BASE_URL=https://v2.smartsplit.be
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3060/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
       interval: 30s
       timeout: 30s
       retries: 3
