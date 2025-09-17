@@ -60,7 +60,7 @@ services:
     depends_on:
       - frontend
     volumes:
-      - ./frontend/smart-split-vite/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8056/health || exit 1"]
       interval: 30s
